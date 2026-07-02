@@ -79,7 +79,7 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
           <span className="material-symbols-outlined notranslate text-[22px]" translate="no">menu</span>
         </button>
         <div className="hidden lg:flex items-center gap-2 text-sm">
-          <span className="text-hubText3 font-bold">trimm hub</span>
+          <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-7 w-auto" />
           <span className="text-hubText3">·</span>
           <span className="text-white font-bold">{breadcrumb[0]}</span>
         </div>

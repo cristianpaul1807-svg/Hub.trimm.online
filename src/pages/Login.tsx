@@ -46,8 +46,7 @@ export default function Login() {
       {/* Top Header */}
       <header className="max-w-7xl w-full mx-auto px-6 py-6 flex items-center justify-between z-10">
         <Link to="/" className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tight text-white">trimm</span>
-          <span className="text-xl font-light text-hubBlueText">hub</span>
+          <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-8 w-auto" />
         </Link>
 
         {/* Language Selector */}

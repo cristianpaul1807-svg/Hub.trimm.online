@@ -65,8 +65,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
         {/* Logo */}
         <div className="h-14 flex items-center px-5 border-b border-hubBorder/60 shrink-0">
           <Link to="/dashboard" className="flex items-center gap-1.5">
-            <span className="text-base font-black tracking-tight text-white">trimm</span>
-            <span className="text-base font-light text-hubBlueText">hub</span>
+            <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-8 w-auto" />
           </Link>
           <button onClick={onClose} className="ml-auto lg:hidden text-hubText3 hover:text-white transition-colors">
             <span className="material-symbols-outlined notranslate text-[20px]" translate="no">close</span>
