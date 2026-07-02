@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /en/
+Allow: /fr/
+Allow: /it/
+Allow: /pt/
+Disallow: /dashboard/
+Disallow: /login
+
+Sitemap: https://hub.trimm.online/sitemap.xml

@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_18", "nodePackages.serve"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build:hub"]
+
+[phases.start]
+cmd = "npx serve dist-hub -s -l 3000"
