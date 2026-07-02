@@ -1,2 +1,13 @@
+[phases.setup]
+nixPkgs = ["nodePackages.pnpm", "nodejs_20"]
+
+[phases.install]
+dependsOn = ["setup"]
+cmds = ["pnpm install"]
+
+[phases.build]
+dependsOn = ["install"]
+cmds = ["pnpm run build"]
+
 [start]
 cmd = "npx serve dist -s -l 3000"
