@@ -16,10 +16,9 @@ const NAV_ITEMS = [
 ];
 
 const MARKETING_ITEMS = [
-  { to: '/dashboard/marketing', icon: 'campaign', label: 'Resumen' },
-  { to: '/dashboard/marketing/campaigns', icon: 'mail', label: 'Campañas' },
-  { to: '/dashboard/marketing/templates', icon: 'auto_awesome', label: 'Plantillas' },
-  { to: '/dashboard/marketing/billing', icon: 'credit_card', label: 'Facturación' },
+  { to: '/dashboard/marketing', icon: 'campaign', labelKey: 'marketing' },
+  { to: '/dashboard/marketing/campaigns', icon: 'mail', labelKey: 'campaigns' },
+  { to: '/dashboard/marketing/billing', icon: 'credit_card', labelKey: 'billing' },
 ];
 
 export default function SideBar({ isOpen, onClose }: SideBarProps) {
@@ -39,6 +38,12 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
     kpis: t.sidebar.kpis,
     workers: t.sidebar.workers,
     comparator: t.sidebar.comparator,
+  };
+
+  const marketingLabels: Record<string, string> = {
+    marketing: t.sidebar.marketing || 'Marketing',
+    campaigns: t.sidebar.campaigns || 'Campañas',
+    billing: t.sidebar.billing || 'Facturación',
   };
 
   const isActive = (path: string) => {
@@ -104,7 +109,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
                 : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}`}
           >
             <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">campaign</span>
-            <span className="flex-1 text-left">Marketing</span>
+            <span className="flex-1 text-left">{marketingLabels.marketing}</span>
             <span className="material-symbols-outlined notranslate text-[16px] transition-transform" style={{ transform: marketingOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} translate="no">expand_more</span>
           </button>
 
@@ -121,7 +126,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
                       : 'text-hubText3 hover:text-white hover:bg-hubSurface2'}`}
                 >
                   <span className="material-symbols-outlined notranslate text-[15px]" translate="no">{item.icon}</span>
-                  {item.label}
+                  {marketingLabels[item.labelKey]}
                 </Link>
               ))}
             </div>
@@ -141,6 +146,22 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
           >
             <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">settings</span>
             {t.sidebar.settings}
+          </Link>
+
+          <div className="my-3 border-t border-hubBorder/40" />
+
+          <Link
+            to="/dashboard/kpis"
+            onClick={onClose}
+            className={`
+              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group
+              ${location.pathname === '/dashboard/kpis'
+                ? 'bg-hubBlueMuted text-hubBlueText border-l-2 border-hubBlue'
+                : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}
+            `}
+          >
+            <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">info</span>
+            {t.sidebar.backToHub}
           </Link>
         </nav>
 
