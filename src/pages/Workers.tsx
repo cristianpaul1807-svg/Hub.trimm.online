@@ -92,35 +92,39 @@ export default function Workers({ selectedBusinessId }: WorkersProps) {
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
       onClick={() => setSortKey(field)}
-      className={`text-left py-3 px-4 text-[10px] font-black uppercase tracking-wider cursor-pointer hover:text-white transition-colors select-none
+      className={`text-left py-3 px-2 sm:px-4 text-[10px] font-black uppercase tracking-wider cursor-pointer hover:text-white transition-colors select-none
         ${sortKey === field ? 'text-hubBlueText' : 'text-hubText3'}`}
     >
-      {label} {sortKey === field && '↓'}
+      <span className="hidden sm:inline">{label}</span>
+      <span className="sm:hidden">{label.slice(0, 3)}</span>
+      {sortKey === field && ' ↓'}
     </th>
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:justify-between">
         <h1 className="text-lg font-black text-white">{t.workers.title}</h1>
 
-        <div className="flex flex-wrap gap-2">
-          {PERIODS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all
-                ${period === p.key ? 'bg-hubBlue text-white shadow-lg shadow-hubBlue/20' : 'bg-hubSurface border border-hubBorder text-hubText2 hover:text-white'}`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-1 sm:gap-2">
+            {PERIODS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-2 sm:px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all
+                  ${period === p.key ? 'bg-hubBlue text-white shadow-lg shadow-hubBlue/20' : 'bg-hubSurface border border-hubBorder text-hubText2 hover:text-white'}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
           {!selectedBusinessId && (
             <select
               value={filterBranch}
               onChange={e => setFilterBranch(e.target.value)}
-              className="bg-hubSurface border border-hubBorder rounded-full px-3 py-1.5 text-xs font-bold text-hubText2 focus:outline-none focus:border-hubBlue/40"
+              className="bg-hubSurface border border-hubBorder rounded-full px-3 py-1.5 text-xs font-bold text-hubText2 focus:outline-none focus:border-hubBlue/40 w-full sm:w-auto"
             >
               <option value="all">{t.workers.allBranches}</option>
               {branches.map((b: any) => (
@@ -133,12 +137,12 @@ export default function Workers({ selectedBusinessId }: WorkersProps) {
 
       <StaffPerformanceChart data={chartData} loading={loading} />
 
-      <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden">
+      <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-x-auto">
         <table className="w-full">
           <thead className="bg-hubSurface2/50 border-b border-hubBorder/40">
             <tr>
-              <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-wider text-hubText3">{t.workers.staffName}</th>
-              {!selectedBusinessId && <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-wider text-hubText3">{t.workers.branch}</th>}
+              <th className="text-left py-3 px-2 sm:px-4 text-[10px] font-black uppercase tracking-wider text-hubText3">{t.workers.staffName}</th>
+              {!selectedBusinessId && <th className="hidden sm:table-cell text-left py-3 px-4 text-[10px] font-black uppercase tracking-wider text-hubText3">{t.workers.branch}</th>}
               <SortHeader label={t.workers.appointments} field="total_appointments" />
               <SortHeader label={t.workers.revenue} field="total_revenue" />
               <SortHeader label={t.workers.avgTicket} field="avg_ticket" />
@@ -148,11 +152,11 @@ export default function Workers({ selectedBusinessId }: WorkersProps) {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-hubBorder/20 animate-pulse">
-                  <td className="py-3 px-4"><div className="h-4 w-32 bg-hubSurface2 rounded" /></td>
-                  {!selectedBusinessId && <td className="py-3 px-4"><div className="h-4 w-24 bg-hubSurface2 rounded" /></td>}
-                  <td className="py-3 px-4"><div className="h-4 w-12 bg-hubSurface2 rounded" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-16 bg-hubSurface2 rounded" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-14 bg-hubSurface2 rounded" /></td>
+                  <td className="py-3 px-2 sm:px-4"><div className="h-4 w-32 bg-hubSurface2 rounded" /></td>
+                  {!selectedBusinessId && <td className="hidden sm:table-cell py-3 px-4"><div className="h-4 w-24 bg-hubSurface2 rounded" /></td>}
+                  <td className="py-3 px-2 sm:px-4"><div className="h-4 w-12 bg-hubSurface2 rounded" /></td>
+                  <td className="py-3 px-2 sm:px-4"><div className="h-4 w-16 bg-hubSurface2 rounded" /></td>
+                  <td className="py-3 px-2 sm:px-4"><div className="h-4 w-14 bg-hubSurface2 rounded" /></td>
                 </tr>
               ))
             ) : sorted.length === 0 ? (
@@ -164,23 +168,23 @@ export default function Workers({ selectedBusinessId }: WorkersProps) {
             ) : (
               sorted.map((row, i) => (
                 <tr key={row.staff_id} className="border-b border-hubBorder/20 hover:bg-hubSurface2/30 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
+                  <td className="py-3 px-2 sm:px-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div className="w-8 h-8 rounded-full bg-hubBlueMuted flex items-center justify-center text-xs font-black text-hubBlueText shrink-0">
                         {(row.staff_name || '?')[0].toUpperCase()}
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">{row.staff_name}</p>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-bold text-white truncate">{row.staff_name}</p>
                         {i === 0 && <p className="text-[9px] text-hubSuccess font-black">🥇 TOP</p>}
                       </div>
                     </div>
                   </td>
                   {!selectedBusinessId && (
-                    <td className="py-3 px-4 text-xs text-hubText2 font-bold">{row.business_name}</td>
+                    <td className="hidden sm:table-cell py-3 px-4 text-xs text-hubText2 font-bold">{row.business_name}</td>
                   )}
-                  <td className="py-3 px-4 text-sm font-black text-white">{row.total_appointments}</td>
-                  <td className="py-3 px-4 text-sm font-black text-white">€{Number(row.total_revenue).toFixed(0)}</td>
-                  <td className="py-3 px-4 text-sm font-black text-white">€{Number(row.avg_ticket).toFixed(0)}</td>
+                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm font-black text-white">{row.total_appointments}</td>
+                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm font-black text-white">€{Number(row.total_revenue).toFixed(0)}</td>
+                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm font-black text-white">€{Number(row.avg_ticket).toFixed(0)}</td>
                 </tr>
               ))
             )}
