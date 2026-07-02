@@ -1,6 +1,6 @@
 {
   "name": "TRIMM Hub",
-  "short_name": "Hub",
+  "short_name": "TRIMM Hub",
   "description": "Panel de control multi-negocio para propietarios de TRIMM",
   "start_url": "/",
   "display": "standalone",
@@ -10,13 +10,13 @@
   "lang": "es",
   "icons": [
     {
-      "src": "/hub-icon-192.png",
+      "src": "/hub-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/hub-icon-512.png",
+      "src": "/hub-logo.png"
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

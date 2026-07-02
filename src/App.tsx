@@ -18,10 +18,7 @@ function HubLoader() {
   return (
     <div className="h-screen w-full flex items-center justify-center bg-hubBg">
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl font-black text-white">trimm</span>
-          <span className="text-xl font-light text-hubBlueText">hub</span>
-        </div>
+        <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-12 w-auto" />
         <div className="w-5 h-5 border-2 border-hubBlue border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
@@ -42,7 +39,7 @@ function ProtectedDashboard() {
   return (
     <ProtectedRoute>
       <HubLayout selectedBusinessId={selectedBusinessId} onBusinessSelect={setSelectedBusinessId}>
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-5 h-5 border-2 border-hubBlue border-t-transparent rounded-full animate-spin" /></div>}>
+          <Suspense fallback={<div className="flex items-center justify-center py-20"><img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-12 w-auto" /><div className="w-5 h-5 border-2 border-hubBlue border-t-transparent rounded-full animate-spin" /></div>}>
           <Routes>
             <Route path="/" element={<Dashboard selectedBusinessId={selectedBusinessId} />} />
             <Route path="/kpis" element={<Dashboard selectedBusinessId={selectedBusinessId} />} />
