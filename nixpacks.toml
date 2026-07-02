@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "nodePackages.serve"]
+nixPkgs = ["nodejs_18", "pnpm"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["pnpm install"]
 
 [phases.build]
-cmds = ["npm run build:hub"]
+cmds = ["pnpm run build"]
 
-[phases.start]
-cmd = "npx serve dist-hub -s -l 3000"
+[start]
+cmd = "npx serve dist -s -l 3000"

@@ -4,15 +4,14 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  root: './hub',
-  envDir: '../',
+  // Now the root is the current directory since we moved the files
+  root: '.',
   build: {
-    outDir: '../dist-hub',
+    outDir: 'dist',
     emptyOutDir: true,
   },
   resolve: {
     alias: {
-      '@shared': path.resolve(__dirname, '../shared'),
       '@hub': path.resolve(__dirname, './src'),
     },
   },
