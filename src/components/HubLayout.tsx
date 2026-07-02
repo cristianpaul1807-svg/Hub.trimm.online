@@ -12,7 +12,7 @@ export default function HubLayout({ children, selectedBusinessId, onBusinessSele
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-hubBg text-hubText font-sans overflow-hidden">
+    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
       <SideBar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -21,8 +21,8 @@ export default function HubLayout({ children, selectedBusinessId, onBusinessSele
           selectedBusinessId={selectedBusinessId}
           onBusinessSelect={onBusinessSelect}
         />
-        <main className="flex-1 overflow-y-auto bg-hubBg">
-          <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
+        <main className="flex-1 overflow-y-auto bg-slate-50">
+          <div className="max-w-[1320px] mx-auto w-full px-6 md:px-8 py-8">
             {children}
           </div>
         </main>

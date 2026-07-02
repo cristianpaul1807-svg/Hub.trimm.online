@@ -56,122 +56,134 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/70 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside className={`
-        fixed top-0 left-0 bottom-0 z-50 w-[240px] bg-hubSurface border-r border-hubBorder flex flex-col
+        fixed top-0 left-0 bottom-0 z-50 w-[var(--sidebar-w)] bg-white border-r border-slate-200 flex flex-col
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen
       `}>
         {/* Logo */}
-        <div className="h-14 flex items-center px-5 border-b border-hubBorder/60 shrink-0">
-          <Link to="/dashboard" className="flex items-center gap-1.5">
-            <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-8 w-auto" />
+        <div className="h-16 flex items-center px-6 border-b border-slate-200 shrink-0">
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-10 w-auto" />
           </Link>
-          <button onClick={onClose} className="ml-auto lg:hidden text-hubText3 hover:text-white transition-colors">
+          <button onClick={onClose} className="ml-auto lg:hidden text-slate-400 hover:text-slate-600 transition-colors">
             <span className="material-symbols-outlined notranslate text-[20px]" translate="no">close</span>
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onClose}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group
-                ${isActive(item.to)
-                  ? 'bg-hubBlueMuted text-hubBlueText border-l-2 border-hubBlue'
-                  : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}
-              `}
-            >
-              <span className={`material-symbols-outlined notranslate text-[20px] transition-transform group-hover:scale-110 ${isActive(item.to) ? 'text-hubBlue' : ''}`} translate="no">
-                {item.icon}
-              </span>
-              {labels[item.labelKey]}
-            </Link>
-          ))}
-
-          {/* Marketing Sub-menu */}
-          <div className="my-3 border-t border-hubBorder/40" />
-
-          <button
-            onClick={() => setMarketingOpen(o => !o)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group
-              ${location.pathname.startsWith('/dashboard/marketing')
-                ? 'bg-hubBlueMuted text-hubBlueText border-l-2 border-hubBlue'
-                : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}`}
-          >
-            <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">campaign</span>
-            <span className="flex-1 text-left">{marketingLabels.marketing}</span>
-            <span className="material-symbols-outlined notranslate text-[16px] transition-transform" style={{ transform: marketingOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} translate="no">expand_more</span>
-          </button>
-
-          {marketingOpen && (
-            <div className="ml-4 space-y-0.5 border-l border-hubBorder/40 pl-3">
-              {MARKETING_ITEMS.map(item => (
-                <Link
+        <nav className="flex-1 overflow-y-auto py-4 px-4 space-y-6">
+          {/* Main Section */}
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inicio</p>
+            <div className="space-y-1">
+              {NAV_ITEMS.slice(0, 1).map((item) => (
+                <NavItem
                   key={item.to}
                   to={item.to}
+                  icon={item.icon}
+                  label={labels[item.labelKey]}
+                  active={isActive(item.to)}
                   onClick={onClose}
-                  className={`flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-all
-                    ${location.pathname === item.to
-                      ? 'text-hubBlueText bg-hubBlueMuted'
-                      : 'text-hubText3 hover:text-white hover:bg-hubSurface2'}`}
-                >
-                  <span className="material-symbols-outlined notranslate text-[15px]" translate="no">{item.icon}</span>
-                  {marketingLabels[item.labelKey]}
-                </Link>
+                />
               ))}
             </div>
-          )}
+          </div>
 
-          <div className="my-3 border-t border-hubBorder/40" />
+          {/* Analytics Section */}
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Análisis</p>
+            <div className="space-y-1">
+              {NAV_ITEMS.slice(1, 4).map((item) => (
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={labels[item.labelKey]}
+                  active={isActive(item.to)}
+                  onClick={onClose}
+                />
+              ))}
+            </div>
+          </div>
 
-          <Link
-            to="/dashboard/settings"
-            onClick={onClose}
-            className={`
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group
-              ${location.pathname === '/dashboard/settings'
-                ? 'bg-hubBlueMuted text-hubBlueText border-l-2 border-hubBlue'
-                : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}
-            `}
-          >
-            <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">settings</span>
-            {t.sidebar.settings}
-          </Link>
+          {/* Marketing Section */}
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Marketing</p>
+            <div className="space-y-1">
+              <button
+                onClick={() => setMarketingOpen(o => !o)}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all group
+                  ${location.pathname.startsWith('/dashboard/marketing')
+                    ? 'bg-slate-100 text-accent shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+                `}
+              >
+                <span className="material-symbols-outlined notranslate text-[22px] group-hover:scale-110 transition-transform" translate="no">
+                  campaign
+                </span>
+                <span className="flex-1 text-left">{marketingLabels.marketing}</span>
+                <span className="material-symbols-outlined notranslate text-[16px] transition-transform" style={{ transform: marketingOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} translate="no">
+                  expand_more
+                </span>
+              </button>
 
-          <div className="my-3 border-t border-hubBorder/40" />
+              {marketingOpen && (
+                <div className="ml-4 space-y-0.5 border-l border-slate-200 pl-3">
+                  {MARKETING_ITEMS.map(item => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={onClose}
+                      className={`
+                        flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all
+                        ${location.pathname === item.to
+                          ? 'text-accent bg-blue-50/50'
+                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
+                      `}
+                    >
+                      <span className="material-symbols-outlined notranslate text-[15px]" translate="no">
+                        {item.icon}
+                      </span>
+                      {marketingLabels[item.labelKey]}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
-          <Link
-            to="/dashboard/kpis"
-            onClick={onClose}
-            className={`
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group
-              ${location.pathname === '/dashboard/kpis'
-                ? 'bg-hubBlueMuted text-hubBlueText border-l-2 border-hubBlue'
-                : 'text-hubText2 hover:bg-hubSurface2 hover:text-white'}
-            `}
-          >
-            <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">info</span>
-            {t.sidebar.backToHub}
-          </Link>
+          {/* Configuration Section */}
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Configuración</p>
+            <div className="space-y-1">
+              <NavItem
+                to="/dashboard/settings"
+                icon="settings"
+                label={t.sidebar.settings}
+                active={location.pathname === '/dashboard/settings'}
+                onClick={onClose}
+              />
+            </div>
+          </div>
         </nav>
 
         {/* Footer logout */}
-        <div className="p-3 border-t border-hubBorder/40 shrink-0">
+        <div className="p-4 border-t border-slate-200 shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-hubText2 hover:bg-red-900/20 hover:text-red-400 transition-all group"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group"
           >
-            <span className="material-symbols-outlined notranslate text-[20px] group-hover:scale-110 transition-transform" translate="no">logout</span>
+            <span className="material-symbols-outlined notranslate text-[22px] group-hover:scale-110 transition-transform" translate="no">
+              logout
+            </span>
             {t.settings.logout}
           </button>
         </div>
@@ -179,3 +191,20 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
     </>
   );
 }
+
+const NavItem = ({ to, icon, label, active, onClick }: { to: string; icon: string; label: string; active: boolean; onClick?: () => void }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`
+      sidebar-pill flex items-center px-4 gap-3 text-sm font-bold transition-all relative group
+      ${active ? 'sidebar-item-active' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+    `}
+  >
+    <span className={`material-symbols-outlined notranslate text-[22px] ${active ? 'fill-current' : 'text-slate-400 group-hover:text-slate-600'}`} translate="no">
+      {icon}
+    </span>
+    <span className="truncate">{label}</span>
+    {active && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-accent"></div>}
+  </Link>
+);

@@ -69,65 +69,61 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
   const initials = (user?.email?.[0] || 'H').toUpperCase();
 
   return (
-    <header className="h-14 bg-hubSurface border-b border-hubBorder/60 flex items-center justify-between px-4 lg:px-6 shrink-0 sticky top-0 z-30">
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
       {/* Left: Hamburger + Breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <button
           onClick={onMenuToggle}
-          className="lg:hidden text-hubText2 hover:text-white transition-colors p-1"
+          className="lg:hidden text-slate-600 hover:text-slate-900 transition-colors p-2 -ml-2"
         >
           <span className="material-symbols-outlined notranslate text-[22px]" translate="no">menu</span>
         </button>
-        <div className="hidden lg:flex items-center gap-2 text-sm">
-          <img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-7 w-auto" />
-          <span className="text-hubText3">·</span>
-          <span className="text-white font-bold">{breadcrumb[0]}</span>
-        </div>
+        <h1 className="text-lg font-bold text-slate-900">{breadcrumb[0]}</h1>
       </div>
 
       {/* Right: Branch selector + Lang + User */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
 
         {/* Branch Selector */}
         <div className="relative" ref={businessRef}>
           <button
             onClick={() => setBusinessDropOpen(o => !o)}
-            className="flex items-center gap-2 bg-hubSurface2 hover:bg-hubBorder border border-hubBorder rounded-xl px-3 py-2 text-xs font-bold text-white transition-all"
+            className="flex items-center gap-2 bg-white/50 hover:bg-white border border-transparent hover:border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-600 transition-all"
           >
-            <span className="material-symbols-outlined notranslate text-hubBlueText text-[16px]" translate="no">corporate_fare</span>
+            <span className="material-symbols-outlined notranslate text-accent text-[16px]" translate="no">corporate_fare</span>
             <span className="max-w-[120px] truncate hidden sm:block">
               {selectedBusiness ? selectedBusiness.businesses.name : t.topbar.allBranches}
             </span>
-            <span className="material-symbols-outlined notranslate text-hubText3 text-[14px]" translate="no">expand_more</span>
+            <span className="material-symbols-outlined notranslate text-slate-400 text-[14px]" translate="no">expand_more</span>
           </button>
 
           {businessDropOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-hubSurface border border-hubBorder rounded-2xl shadow-2xl shadow-black/50 py-2 z-50 animate-fade-in">
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl py-2 z-50 animate-fade-in">
               <button
                 onClick={() => { onBusinessSelect(null); setBusinessDropOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-hubSurface2 transition-colors flex items-center gap-2
-                  ${!selectedBusinessId ? 'text-hubBlueText' : 'text-hubText2'}`}
+                className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-2
+                  ${!selectedBusinessId ? 'text-accent' : 'text-slate-600'}`}
               >
                 <span className="material-symbols-outlined notranslate text-[16px]" translate="no">hub</span>
                 {t.topbar.allBranches}
               </button>
-              <div className="border-t border-hubBorder/40 my-1" />
+              <div className="border-t border-slate-100 my-1" />
               {linkedBusinesses.map((b) => (
                 <button
                   key={b.business_id}
                   onClick={() => { onBusinessSelect(b.business_id); setBusinessDropOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-hubSurface2 transition-colors flex items-center gap-2
-                    ${selectedBusinessId === b.business_id ? 'text-hubBlueText' : 'text-white'}`}
+                  className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-2
+                    ${selectedBusinessId === b.business_id ? 'text-accent' : 'text-slate-600'}`}
                 >
                   <span className="material-symbols-outlined notranslate text-[16px]" translate="no">storefront</span>
                   <span className="truncate">{b.businesses.name}</span>
                 </button>
               ))}
-              <div className="border-t border-hubBorder/40 my-1" />
+              <div className="border-t border-slate-100 my-1" />
               <Link
                 to="/dashboard/settings"
                 onClick={() => setBusinessDropOpen(false)}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-hubText3 hover:text-white hover:bg-hubSurface2 transition-colors flex items-center gap-2"
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors flex items-center gap-2"
               >
                 <span className="material-symbols-outlined notranslate text-[16px]" translate="no">add</span>
                 {t.topbar.addBusiness}
@@ -140,20 +136,20 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
         <div className="relative" ref={langRef}>
           <button
             onClick={() => setLangDropOpen(o => !o)}
-            className="flex items-center gap-1 bg-hubSurface2 hover:bg-hubBorder border border-hubBorder rounded-xl px-2.5 py-2 text-xs font-black text-white transition-all"
+            className="flex items-center gap-1 bg-white/50 hover:bg-white border border-transparent hover:border-slate-200 px-2.5 py-1.5 rounded-full text-xs font-bold text-slate-600 transition-all"
           >
             <span>{LANG_FLAGS[lang]}</span>
             <span className="hidden sm:block">{lang.toUpperCase()}</span>
           </button>
 
           {langDropOpen && (
-            <div className="absolute right-0 top-full mt-2 w-36 bg-hubSurface border border-hubBorder rounded-2xl shadow-2xl shadow-black/50 py-2 z-50 animate-fade-in">
+            <div className="absolute right-0 top-full mt-2 w-36 bg-white border border-slate-100 rounded-xl shadow-xl py-2 z-50 animate-fade-in">
               {(['es', 'en', 'fr', 'it', 'pt'] as const).map((l) => (
                 <button
                   key={l}
                   onClick={() => { setLang(l); setLangDropOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-hubSurface2 transition-colors flex items-center gap-2
-                    ${lang === l ? 'text-hubBlueText' : 'text-hubText2'}`}
+                  className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-2
+                    ${lang === l ? 'text-accent' : 'text-slate-600'}`}
                 >
                   {LANG_FLAGS[l]} {l.toUpperCase()}
                 </button>
@@ -162,32 +158,35 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
           )}
         </div>
 
+        {/* Divider */}
+        <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+
         {/* User Avatar */}
         <div className="relative" ref={userRef}>
           <button
             onClick={() => setUserDropOpen(o => !o)}
-            className="w-8 h-8 rounded-full bg-hubBlue text-white text-xs font-black flex items-center justify-center hover:bg-hubBlueHover transition-colors border-2 border-transparent hover:border-hubBlueText"
+            className="w-8 h-8 rounded-full bg-accent text-white text-xs font-bold flex items-center justify-center hover:bg-blue-600 transition-colors border-2 border-transparent hover:border-blue-400"
           >
             {initials}
           </button>
 
           {userDropOpen && (
-            <div className="absolute right-0 top-full mt-2 w-52 bg-hubSurface border border-hubBorder rounded-2xl shadow-2xl shadow-black/50 py-2 z-50 animate-fade-in">
-              <div className="px-4 py-3 border-b border-hubBorder/40">
-                <p className="text-xs font-black text-white truncate">{user?.email}</p>
-                <p className="text-[10px] text-hubText3 font-bold mt-0.5">Hub Owner</p>
+            <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-100 rounded-xl shadow-xl py-2 z-50 animate-fade-in">
+              <div className="px-4 py-3 border-b border-slate-100">
+                <p className="text-xs font-bold text-slate-900 truncate">{user?.email}</p>
+                <p className="text-[10px] text-slate-500 font-bold mt-0.5">Hub Owner</p>
               </div>
               <Link
                 to="/dashboard/settings"
                 onClick={() => setUserDropOpen(false)}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-hubText2 hover:text-white hover:bg-hubSurface2 transition-colors flex items-center gap-2"
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors flex items-center gap-2"
               >
                 <span className="material-symbols-outlined notranslate text-[16px]" translate="no">settings</span>
                 {t.sidebar.settings}
               </Link>
               <button
                 onClick={() => { logout(); }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-400 hover:bg-red-900/20 transition-colors flex items-center gap-2"
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
               >
                 <span className="material-symbols-outlined notranslate text-[16px]" translate="no">logout</span>
                 {t.settings.logout}
