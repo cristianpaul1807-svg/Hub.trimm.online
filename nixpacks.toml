@@ -2,7 +2,8 @@
 nixPkgs = ["nodejs_18", "pnpm"]
 
 [phases.install]
-cmds = ["pnpm install --frozen-lockfile"]
+cmds = ["pnpm install"]
+cacheDirectories = ["node_modules"]
 
 [phases.build]
 cmds = ["pnpm run build"]
