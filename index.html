@@ -27,9 +27,9 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="theme-color" content="#2563eb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="TRIMM Hub" />
   <link rel="apple-touch-icon" href="/hub-logo.png" />
 
@@ -43,23 +43,29 @@
       theme: {
         extend: {
           colors: {
-            hubBg: '#0a0a0a',
-            hubSurface: '#111111',
-            hubSurface2: '#1a1a1a',
-            hubBorder: '#2a2a2a',
-            hubBlue: '#007BFF',
-            hubBlueHover: '#0056B3',
-            hubBlueMuted: '#1A2B4D',
-            hubBlueText: '#87CEEB',
-            hubText: '#f8f8f8',
-            hubText2: '#a0a0a0',
-            hubText3: '#555555',
+            accent: '#2563eb',
+            hubBg: '#f8fafc',
+            hubSurface: '#ffffff',
+            hubSurface2: '#f1f5f9',
+            hubBorder: '#e2e8f0',
+            hubBlue: '#2563eb',
+            hubBlueHover: '#1d4ed8',
+            hubBlueMuted: '#1e3a5f',
+            hubBlueText: '#60a5fa',
+            hubText: '#0f172a',
+            hubText2: '#64748b',
+            hubText3: '#94a3b8',
             hubSuccess: '#22c55e',
             hubDanger: '#ef4444',
             hubWarning: '#f59e0b',
           },
           fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+          },
+          borderRadius: {
+            '3xl': '24px',
+            '2xl': '16px',
+            'xl': '12px',
           }
         }
       }
@@ -69,10 +75,10 @@
   <!-- Material Icons & Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
-<body>
+<body class="bg-[#f8fafc]">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

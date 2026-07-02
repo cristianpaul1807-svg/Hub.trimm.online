@@ -96,7 +96,7 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
         setMetrics(data as HubMetrics);
       }
 
-      // Build simple per-day revenue (appointments table, group by date)
+      // Build simple per-day revenue
       const { data: appts } = await supabase
         .from('appointments')
         .select('start_time, price, business_id')
@@ -135,30 +135,30 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
 
   if (!linkedIds.length && !loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
-        <div className="w-16 h-16 bg-hubSurface border border-hubBorder rounded-3xl flex items-center justify-center text-hubBlueText">
-          <span className="material-symbols-outlined notranslate text-3xl" translate="no">corporate_fare</span>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 text-center">
+        <div className="w-20 h-20 bg-white border border-slate-100 rounded-[32px] flex items-center justify-center text-accent shadow-soft">
+          <span className="material-symbols-outlined notranslate text-4xl" translate="no">corporate_fare</span>
         </div>
-        <div className="space-y-2 max-w-xs">
-          <h2 className="text-xl font-black text-white">Sin negocios vinculados</h2>
-          <p className="text-sm text-hubText2">Ve a <strong className="text-white">Ajustes</strong> y vincula tu primera sucursal con su código de acceso.</p>
+        <div className="space-y-3 max-w-sm">
+          <h2 className="text-2xl font-black text-slate-900">Sin negocios vinculados</h2>
+          <p className="text-sm text-slate-500 font-medium">Ve a <strong className="text-accent">Ajustes</strong> y vincula tu primera sucursal con su código de acceso para empezar a ver métricas.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       {/* Period Selector */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {PERIODS.map((p) => (
           <button
             key={p.key}
             onClick={() => setPeriod(p.key)}
-            className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all
+            className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all
               ${period === p.key
-                ? 'bg-hubBlue text-white shadow-lg shadow-hubBlue/20'
-                : 'bg-hubSurface border border-hubBorder text-hubText2 hover:text-white hover:border-hubBlue/40'}`}
+                ? 'bg-accent text-white shadow-lg shadow-accent/20'
+                : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 shadow-sm'}`}
           >
             {p.label}
           </button>
@@ -166,7 +166,7 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {kpis.map((kpi, i) => (
           <MetricCard
             key={i}
@@ -183,23 +183,26 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
 
       {/* Branch quick summary */}
       {!selectedBusinessId && linkedBusinesses.length > 0 && (
-        <div className="bg-hubSurface border border-hubBorder rounded-2xl p-5">
-          <p className="text-sm font-black text-white mb-4">Sucursales activas</p>
-          <div className="space-y-3">
+        <div className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-soft">
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Sucursales activas</p>
+            <span className="text-[10px] font-black text-accent bg-blue-50 px-3 py-1 rounded-full">{linkedBusinesses.length} Total</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {linkedBusinesses.map((b: any, i: number) => (
-              <div key={b.business_id} className="flex items-center justify-between py-2.5 border-b border-hubBorder/30 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-hubBlueMuted border border-hubBlue/20 flex items-center justify-center text-xs font-black text-hubBlueText">
+              <div key={b.business_id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-sm font-black text-accent shadow-sm group-hover:scale-105 transition-transform">
                     {(b.businesses?.name || 'N')[0].toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white">{b.businesses?.name}</p>
-                    <p className="text-[10px] text-hubText3 font-bold">Sucursal</p>
+                    <p className="text-sm font-black text-slate-900">{b.businesses?.name}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Sucursal vinculada</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-hubSuccess" />
-                  <span className="text-[10px] text-hubSuccess font-bold">Activa</span>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] text-emerald-600 font-black uppercase">Online</span>
                 </div>
               </div>
             ))}
