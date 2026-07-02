@@ -114,6 +114,7 @@ export const es = {
     linkedSince: 'Vinculado desde',
     employees: 'empleados',
     unlinkButton: 'Desvincular',
+    noBusinessesHelper: 'Vincula tu primera sucursal con el botón de arriba.',
     unlinkConfirm: '¿Seguro? Este negocio desaparecerá de tu Hub. Puedes volver a vincularlo con un nuevo código.',
     addBusiness: '+ Vincular nuevo negocio',
     modalTitle: 'Vincular negocio',

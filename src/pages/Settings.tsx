@@ -111,7 +111,7 @@ export default function Settings() {
         ) : linked.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-hubText3 font-bold">{t.errors.noData}</p>
-            <p className="text-xs text-hubText3 mt-1">Vincula tu primera sucursal con el botón de arriba.</p>
+            <p className="text-xs text-hubText3 mt-1">{t.settings.noBusinessesHelper}</p>
           </div>
         ) : (
           <div className="divide-y divide-hubBorder/20">

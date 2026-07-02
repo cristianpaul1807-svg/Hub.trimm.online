@@ -116,6 +116,7 @@ export const pt: HubTranslations = {
     linkedSince: 'Associado desde',
     employees: 'funcionários',
     unlinkButton: 'Desassociar',
+    noBusinessesHelper: 'Associe seu primeiro ramo com o botão acima.',
     unlinkConfirm: 'Tem a certeza? Este negócio deixará de aparecer no seu Hub. Pode voltar a associá-lo a qualquer momento com um novo código.',
     addBusiness: '+ Associar novo negócio',
     modalTitle: 'Associar negócio',
