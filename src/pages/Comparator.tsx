@@ -126,12 +126,12 @@ export default function Comparator() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:justify-between">
         <h1 className="text-lg font-black text-white">{t.comparator.title}</h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2 w-full sm:w-auto">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all
+              className={`px-2 sm:px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all
                 ${period === p.key ? 'bg-hubBlue text-white shadow-lg shadow-hubBlue/20' : 'bg-hubSurface border border-hubBorder text-hubText2 hover:text-white'}`}>
               {p.label}
             </button>
@@ -140,12 +140,13 @@ export default function Comparator() {
       </div>
 
       {/* Metric selector */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-1 sm:gap-2 flex-wrap">
         {METRICS.map(m => (
           <button key={m.key} onClick={() => setMetric(m.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border
+            className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all border
               ${metric === m.key ? 'bg-hubBlueMuted border-hubBlue/40 text-hubBlueText' : 'bg-hubSurface border-hubBorder text-hubText2 hover:text-white'}`}>
-            {m.label}
+            <span className="hidden sm:inline">{m.label}</span>
+            <span className="sm:hidden">{m.label.slice(0, 3)}</span>
           </button>
         ))}
       </div>
@@ -155,11 +156,11 @@ export default function Comparator() {
 
       {/* Ranking */}
       <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-hubBorder/40">
-          <p className="text-sm font-black text-white">Ranking por {METRICS.find(m => m.key === metric)?.label}</p>
+        <div className="px-4 sm:px-5 py-4 border-b border-hubBorder/40">
+          <p className="text-xs sm:text-sm font-black text-white">Ranking por {METRICS.find(m => m.key === metric)?.label}</p>
         </div>
         {loading ? (
-          <div className="p-5 space-y-3 animate-pulse">
+          <div className="p-3 sm:p-5 space-y-3 animate-pulse">
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-12 bg-hubSurface2 rounded-xl" />)}
           </div>
         ) : (
@@ -172,14 +173,14 @@ export default function Comparator() {
               const isBigDrop = delta !== null && delta < -10;
 
               return (
-                <div key={row.business_id} className={`flex items-center gap-4 px-5 py-4 hover:bg-hubSurface2/30 transition-colors ${isBigDrop ? 'border-l-2 border-hubDanger' : ''}`}>
+                <div key={row.business_id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 hover:bg-hubSurface2/30 transition-colors ${isBigDrop ? 'border-l-2 border-hubDanger' : ''}`}>
                   <span className="text-lg shrink-0 w-8 text-center">{MEDALS[i] || `${i + 1}.`}</span>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-sm font-bold text-white truncate">{row.business_name}</p>
-                      <div className="flex items-center gap-2 ml-3">
-                        <p className="text-sm font-black text-white">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 sm:mb-1.5">
+                      <p className="text-xs sm:text-sm font-bold text-white truncate">{row.business_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs sm:text-sm font-black text-white">
                           {metric === 'revenue' || metric === 'avg_ticket' ? `€${curr.toFixed(0)}` : curr}
                         </p>
                         {delta !== null && (
