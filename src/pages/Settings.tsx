@@ -8,7 +8,6 @@ interface LinkedBusiness {
   business_id: string;
   linked_at: string;
   businesses: { name: string; slug: string };
-  staff_count?: number;
 }
 
 export default function Settings() {
@@ -37,13 +36,13 @@ export default function Settings() {
 
   useEffect(() => { fetchLinked(); }, [user]);
 
-  const handleLink = async () => {
+  const handleLink = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!tokenInput.trim()) return;
     setLinking(true);
     setLinkError('');
     setLinkSuccess('');
 
-    // Format token: user types TRIMM-XXXX-XXXX-XXXX, we extract the raw hex
     const raw = tokenInput.replace(/TRIMM-/i, '').replace(/-/g, '').toLowerCase();
 
     const { data, error } = await supabase.rpc('claim_hub_token', { p_token: raw });
@@ -72,188 +71,214 @@ export default function Settings() {
   };
 
   const LANGS = [
-    { code: 'es', label: '🇪🇸 Español' },
-    { code: 'en', label: '🇺🇸 English' },
-    { code: 'fr', label: '🇫🇷 Français' },
-    { code: 'it', label: '🇮🇹 Italiano' },
-    { code: 'pt', label: '🇵🇹 Português' },
+    { code: 'es', label: 'Español', flag: '🇪🇸' },
+    { code: 'en', label: 'English', flag: '🇺🇸' },
+    { code: 'fr', label: 'Français', flag: '🇫🇷' },
+    { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+    { code: 'pt', label: 'Português', flag: '🇵🇹' },
   ];
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <h1 className="text-lg font-black text-white">{t.settings.title}</h1>
+    <div className="max-w-4xl mx-auto space-y-10 animate-fade-in pb-20">
+      <header className="flex flex-col gap-2">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{t.settings.title}</h2>
+        <p className="text-sm text-slate-500 font-medium">{t.meta.siteDescription}</p>
+      </header>
 
-      {/* Success Toast */}
       {linkSuccess && (
-        <div className="bg-hubSuccess/10 border border-hubSuccess/20 text-hubSuccess px-4 py-3 rounded-2xl text-sm font-bold flex items-center gap-2">
-          <span className="material-symbols-outlined notranslate text-[18px]" translate="no">check_circle</span>
+        <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-6 py-4 rounded-2xl text-sm font-bold flex items-center gap-3 animate-fade-in shadow-sm">
+          <span className="material-symbols-outlined notranslate text-[20px]" translate="no">check_circle</span>
           {linkSuccess}
         </div>
       )}
 
-      {/* Linked Businesses */}
-      <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-hubBorder/40">
-          <p className="text-sm font-black text-white">{t.settings.linkedBusinesses}</p>
+      {/* Linked Businesses Section */}
+      <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t.settings.linkedBusinesses}</h3>
           <button
             onClick={() => { setShowModal(true); setLinkError(''); setTokenInput(''); }}
-            className="bg-hubBlue hover:bg-hubBlueHover text-white px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all flex items-center gap-1.5"
+            className="bg-accent hover:bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all shadow-md shadow-accent/20 active:scale-95 flex items-center gap-2"
           >
-            <span className="material-symbols-outlined notranslate text-[16px]" translate="no">add</span>
+            <span className="material-symbols-outlined notranslate text-[18px]" translate="no">add</span>
             {t.settings.addBusiness}
           </button>
         </div>
 
-        {loadingLinked ? (
-          <div className="p-5 space-y-3 animate-pulse">
-            {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-16 bg-hubSurface2 rounded-xl" />)}
-          </div>
-        ) : linked.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-sm text-hubText3 font-bold">{t.errors.noData}</p>
-            <p className="text-xs text-hubText3 mt-1">{t.settings.noBusinessesHelper}</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-hubBorder/20">
-            {linked.map((b) => (
-              <div key={b.id} className="flex items-center gap-4 px-5 py-4">
-                <div className="w-10 h-10 rounded-2xl bg-hubBlueMuted border border-hubBlue/20 flex items-center justify-center text-sm font-black text-hubBlueText shrink-0">
-                  {(b.businesses?.name || 'N')[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{b.businesses?.name}</p>
-                  <p className="text-[10px] text-hubText3 font-bold mt-0.5">
-                    {t.settings.linkedSince} {new Date(b.linked_at).toLocaleDateString()}
-                  </p>
+        <div className="divide-y divide-slate-100">
+          {loadingLinked ? (
+            <div className="p-10 text-center animate-pulse space-y-4">
+              <div className="h-12 bg-slate-50 rounded-xl w-full"></div>
+              <div className="h-12 bg-slate-50 rounded-xl w-full"></div>
+            </div>
+          ) : linked.length === 0 ? (
+            <div className="p-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mx-auto border border-slate-100">
+                <span className="material-symbols-outlined notranslate text-3xl" translate="no">storefront</span>
+              </div>
+              <p className="text-sm text-slate-400 font-bold">{t.settings.noBusinessesHelper}</p>
+            </div>
+          ) : (
+            linked.map((b) => (
+              <div key={b.id} className="px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-sm font-black text-accent shadow-sm group-hover:scale-105 transition-transform">
+                    {(b.businesses?.name || 'N')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-900">{b.businesses?.name}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                      {t.settings.linkedSince} {new Date(b.linked_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setUnlinkId(b.id)}
-                  className="text-hubText3 hover:text-hubDanger transition-colors px-2 py-1 rounded-lg hover:bg-red-900/20 text-xs font-bold flex items-center gap-1"
+                  className="text-slate-400 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-red-50"
                 >
-                  <span className="material-symbols-outlined notranslate text-[16px]" translate="no">link_off</span>
-                  {t.settings.unlinkButton}
+                  <span className="material-symbols-outlined notranslate text-[20px]" translate="no">link_off</span>
                 </button>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Account Settings */}
-      <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-hubBorder/40">
-          <p className="text-sm font-black text-white">{t.settings.account}</p>
+            ))
+          )}
         </div>
-        <div className="divide-y divide-hubBorder/20">
-          <div className="px-5 py-4 flex items-center justify-between">
-            <p className="text-xs font-bold text-hubText2">Email</p>
-            <p className="text-xs font-black text-white">{user?.email}</p>
+      </section>
+
+      {/* Account & Preferences */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Account Info */}
+        <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t.settings.account}</h3>
           </div>
-          <div className="px-5 py-4 flex items-center justify-between">
-            <p className="text-xs font-bold text-hubText2">{t.settings.language}</p>
-            <select
-              value={lang}
-              onChange={e => setLang(e.target.value as any)}
-              className="bg-hubSurface2 border border-hubBorder rounded-xl px-3 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-hubBlue/40"
-            >
-              {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </select>
-          </div>
-          <div className="px-5 py-4">
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                <p className="text-sm font-bold text-slate-900">{user?.email}</p>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-blue-50 text-accent text-[10px] font-black uppercase tracking-wider border border-blue-100">
+                Owner
+              </div>
+            </div>
             <button
-              onClick={() => logout()}
-              className="text-hubDanger hover:bg-red-900/20 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2"
+              onClick={logout}
+              className="w-full text-center py-3 rounded-xl text-xs font-black tracking-widest uppercase text-red-600 border border-red-100 hover:bg-red-50 transition-all active:scale-[0.98]"
             >
-              <span className="material-symbols-outlined notranslate text-[16px]" translate="no">logout</span>
               {t.settings.logout}
             </button>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Notifications (Coming Soon) */}
-      <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden opacity-50">
-        <div className="px-5 py-4 border-b border-hubBorder/40 flex items-center justify-between">
-          <p className="text-sm font-black text-white">{t.settings.notifications}</p>
-          <span className="text-[9px] font-black uppercase tracking-widest text-hubText3 bg-hubSurface2 border border-hubBorder px-2 py-1 rounded-full">{t.settings.comingSoon}</span>
-        </div>
-        <div className="divide-y divide-hubBorder/20">
-          {[t.settings.notifWeekly, t.settings.notifAlerts].map((n, i) => (
-            <div key={i} className="px-5 py-4 flex items-center justify-between">
-              <p className="text-xs font-bold text-hubText2">{n}</p>
-              <div className="w-8 h-4 bg-hubSurface2 border border-hubBorder rounded-full" />
+        {/* Preferences */}
+        <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t.settings.language}</h3>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 gap-2">
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => setLang(l.code as any)}
+                  className={`
+                    flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all
+                    ${lang === l.code 
+                      ? 'bg-accent text-white shadow-md' 
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-100'}
+                  `}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="text-lg">{l.flag}</span>
+                    {l.label}
+                  </span>
+                  {lang === l.code && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        </section>
       </div>
 
-      {/* Link Modal */}
+      {/* Modal: Link Business */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-hubSurface border border-hubBorder rounded-3xl p-6 w-full max-w-sm shadow-2xl shadow-black/80 space-y-5" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-black text-white">{t.settings.modalTitle}</h3>
-                <p className="text-xs text-hubText2 mt-1 leading-relaxed">{t.settings.modalDesc}</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="text-hubText3 hover:text-white transition-colors ml-3 mt-0.5">
-                <span className="material-symbols-outlined notranslate text-[20px]" translate="no">close</span>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in" onClick={() => setShowModal(false)}>
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">{t.settings.modalTitle}</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <span className="material-symbols-outlined notranslate text-[24px]" translate="no">close</span>
               </button>
             </div>
+            
+            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+              {t.settings.modalDesc}
+            </p>
 
             {linkError && (
-              <div className="bg-hubDanger/10 border border-hubDanger/20 text-hubDanger px-3 py-2.5 rounded-xl text-xs font-bold">
+              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-xs font-bold animate-fade-in">
                 {linkError}
               </div>
             )}
 
-            <input
-              type="text"
-              value={tokenInput}
-              onChange={e => setTokenInput(e.target.value.toUpperCase())}
-              placeholder={t.settings.tokenPlaceholder}
-              className="w-full bg-hubSurface2 border border-hubBorder rounded-2xl px-4 py-3 text-sm text-white font-black tracking-widest focus:outline-none focus:border-hubBlue/60 placeholder-hubText3 transition-colors text-center"
-            />
+            <form onSubmit={handleLink} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Access Token</label>
+                <input
+                  autoFocus
+                  required
+                  type="text"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
+                  placeholder={t.settings.tokenPlaceholder}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 focus:outline-none focus:border-accent/40 focus:bg-white placeholder-slate-300 transition-all"
+                />
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-hubSurface2 hover:bg-hubBorder text-hubText2 py-3 rounded-2xl text-xs font-bold transition-all border border-hubBorder"
-              >
-                {t.settings.cancelButton}
-              </button>
-              <button
-                onClick={handleLink}
-                disabled={linking || !tokenInput.trim()}
-                className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {linking ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                ) : t.settings.linkButton}
-              </button>
-            </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-6 py-4 rounded-2xl text-xs font-black tracking-widest uppercase text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  {t.settings.cancelButton}
+                </button>
+                <button
+                  type="submit"
+                  disabled={linking || !tokenInput.trim()}
+                  className="flex-[2] bg-accent hover:bg-blue-600 text-white py-4 rounded-2xl text-xs font-black tracking-widest uppercase transition-all shadow-lg shadow-accent/20 active:scale-95 disabled:opacity-50"
+                >
+                  {linking ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" /> : t.settings.linkButton}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Unlink Confirm Modal */}
+      {/* Modal: Unlink Confirmation */}
       {unlinkId && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setUnlinkId(null)}>
-          <div className="bg-hubSurface border border-hubBorder rounded-3xl p-6 w-full max-w-sm shadow-2xl shadow-black/80 space-y-5" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-2xl bg-hubDanger/10 border border-hubDanger/20 flex items-center justify-center text-hubDanger mx-auto">
-              <span className="material-symbols-outlined notranslate text-xl" translate="no">link_off</span>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in" onClick={() => setUnlinkId(null)}>
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 w-full max-w-sm shadow-2xl space-y-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 mx-auto border border-red-100">
+              <span className="material-symbols-outlined notranslate text-3xl" translate="no">link_off</span>
             </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-base font-black text-white">{t.settings.unlinkButton}</h3>
-              <p className="text-xs text-hubText2 leading-relaxed">{t.settings.unlinkConfirm}</p>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">{t.settings.unlinkButton}?</h3>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                {t.settings.unlinkConfirm}
+              </p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setUnlinkId(null)} className="flex-1 bg-hubSurface2 hover:bg-hubBorder text-hubText2 py-3 rounded-2xl text-xs font-bold transition-all border border-hubBorder">
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setUnlinkId(null)}
+                className="flex-1 px-6 py-4 rounded-2xl text-xs font-black tracking-widest uppercase text-slate-500 hover:bg-slate-50 transition-all"
+              >
                 {t.settings.cancelButton}
               </button>
               <button
                 onClick={() => handleUnlink(unlinkId)}
-                className="flex-1 bg-hubDanger hover:bg-red-700 text-white py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl text-xs font-black tracking-widest uppercase transition-all shadow-lg shadow-red-600/20 active:scale-95"
               >
                 {t.settings.unlinkButton}
               </button>
