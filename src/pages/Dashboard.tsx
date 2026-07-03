@@ -135,8 +135,8 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
 
   if (!linkedIds.length && !loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 text-center">
-        <div className="w-20 h-20 bg-white border border-slate-100 rounded-[32px] flex items-center justify-center text-accent shadow-soft">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 text-center py-12">
+        <div className="w-20 h-20 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-accent shadow-sm">
           <span className="material-symbols-outlined notranslate text-4xl" translate="no">corporate_fare</span>
         </div>
         <div className="space-y-3 max-w-sm">
@@ -150,15 +150,15 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Period Selector */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         {PERIODS.map((p) => (
           <button
             key={p.key}
             onClick={() => setPeriod(p.key)}
-            className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all
+            className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-200
               ${period === p.key
-                ? 'bg-accent text-white shadow-lg shadow-accent/20'
-                : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 shadow-sm'}`}
+                ? 'bg-accent text-white shadow-md'
+                : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'}`}
           >
             {p.label}
           </button>
@@ -166,7 +166,7 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, i) => (
           <MetricCard
             key={i}
@@ -183,26 +183,28 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
 
       {/* Branch quick summary */}
       {!selectedBusinessId && linkedBusinesses.length > 0 && (
-        <div className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-soft">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center justify-between mb-6">
-            <p className="text-sm font-black text-slate-900 uppercase tracking-widest">{t.sidebar.metrics}</p>
-            <span className="text-[10px] font-black text-accent bg-blue-50 px-3 py-1 rounded-full">{linkedBusinesses.length} {t.settings.linkedBusinesses}</span>
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{t.sidebar.metrics}</h3>
+            <span className="text-xs font-black text-accent bg-blue-50 px-4 py-1.5 rounded-full">
+              {linkedBusinesses.length} {t.settings.linkedBusinesses}
+            </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {linkedBusinesses.map((b: any, i: number) => (
-              <div key={b.business_id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-all group">
+            {linkedBusinesses.map((b: any) => (
+              <div key={b.business_id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-sm font-black text-accent shadow-sm group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-sm font-black text-accent border border-slate-200 group-hover:scale-105 transition-transform">
                     {(b.businesses?.name || 'N')[0].toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-black text-slate-900">{b.businesses?.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{t.settings.linkedBusinesses}</p>
+                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-tighter">{t.settings.linkedBusinesses}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-emerald-600 font-black uppercase">{t.topbar.allBranches}</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-subtle" />
+                  <span className="text-xs text-emerald-700 font-black uppercase">Active</span>
                 </div>
               </div>
             ))}
