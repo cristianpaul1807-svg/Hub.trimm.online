@@ -142,9 +142,14 @@ export default function Login() {
             Google OAuth
           </button>
 
-          <p className="text-center text-[10px] text-slate-400 leading-relaxed font-medium">
+          <a 
+            href="https://wa.me/393290914158"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-[10px] text-slate-400 hover:text-accent leading-relaxed font-medium transition-colors"
+          >
             {t.login.noAccess}
-          </p>
+          </a>
         </div>
       </main>
 

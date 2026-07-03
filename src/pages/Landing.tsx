@@ -216,7 +216,7 @@ export default function Landing() {
           <div className="flex flex-wrap md:justify-end gap-10 text-sm font-bold">
             <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
             <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
-            <a href="mailto:soporte@trimm.online" className="text-slate-400 hover:text-white transition-colors">{t.footer.support}</a>
+            <a href="https://wa.me/393290914158" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">{t.footer.support}</a>
           </div>
         </div>
         
