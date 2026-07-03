@@ -124,7 +124,7 @@ export default function Login() {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-100"></div>
             </div>
-            <span className="relative bg-white px-4 text-[10px] uppercase font-black tracking-widest text-slate-300">o continuar con</span>
+            <span className="relative bg-white px-4 text-[10px] uppercase font-black tracking-widest text-slate-300">{t.login.noAccess}</span>
           </div>
 
           {/* Google OAuth Login Button */}

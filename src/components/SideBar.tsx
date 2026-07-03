@@ -81,7 +81,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
         <nav className="flex-1 overflow-y-auto py-4 px-4 space-y-6">
           {/* Main Section */}
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inicio</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.sidebar.metrics}</p>
             <div className="space-y-1">
               {NAV_ITEMS.slice(0, 1).map((item) => (
                 <NavItem
@@ -98,7 +98,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
 
           {/* Analytics Section */}
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Análisis</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Analytics</p>
             <div className="space-y-1">
               {NAV_ITEMS.slice(1, 4).map((item) => (
                 <NavItem
@@ -115,7 +115,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
 
           {/* Marketing Section */}
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Marketing</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.sidebar.marketing}</p>
             <div className="space-y-1">
               <button
                 onClick={() => setMarketingOpen(o => !o)}
@@ -162,7 +162,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
 
           {/* Configuration Section */}
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Configuración</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.sidebar.settings}</p>
             <div className="space-y-1">
               <NavItem
                 to="/dashboard/settings"

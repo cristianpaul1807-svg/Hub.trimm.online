@@ -140,8 +140,8 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
           <span className="material-symbols-outlined notranslate text-4xl" translate="no">corporate_fare</span>
         </div>
         <div className="space-y-3 max-w-sm">
-          <h2 className="text-2xl font-black text-slate-900">Sin negocios vinculados</h2>
-          <p className="text-sm text-slate-500 font-medium">Ve a <strong className="text-accent">Ajustes</strong> y vincula tu primera sucursal con su código de acceso para empezar a ver métricas.</p>
+          <h2 className="text-2xl font-black text-slate-900">{t.errors.noData}</h2>
+          <p className="text-sm text-slate-500 font-medium">{t.settings.noBusinessesHelper}</p>
         </div>
       </div>
     );
@@ -185,8 +185,8 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
       {!selectedBusinessId && linkedBusinesses.length > 0 && (
         <div className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-soft">
           <div className="flex items-center justify-between mb-6">
-            <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Sucursales activas</p>
-            <span className="text-[10px] font-black text-accent bg-blue-50 px-3 py-1 rounded-full">{linkedBusinesses.length} Total</span>
+            <p className="text-sm font-black text-slate-900 uppercase tracking-widest">{t.sidebar.metrics}</p>
+            <span className="text-[10px] font-black text-accent bg-blue-50 px-3 py-1 rounded-full">{linkedBusinesses.length} {t.settings.linkedBusinesses}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {linkedBusinesses.map((b: any, i: number) => (
@@ -197,12 +197,12 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
                   </div>
                   <div>
                     <p className="text-sm font-black text-slate-900">{b.businesses?.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Sucursal vinculada</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{t.settings.linkedBusinesses}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-emerald-600 font-black uppercase">Online</span>
+                  <span className="text-[10px] text-emerald-600 font-black uppercase">{t.topbar.allBranches}</span>
                 </div>
               </div>
             ))}

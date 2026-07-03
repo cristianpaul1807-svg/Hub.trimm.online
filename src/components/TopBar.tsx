@@ -15,13 +15,14 @@ interface LinkedBusiness {
   businesses: { name: string; slug: string };
 }
 
-const BREADCRUMBS: Record<string, string[]> = {
-  '/dashboard': ['Métricas'],
-  '/dashboard/kpis': ['KPIs'],
-  '/dashboard/workers': ['Trabajadores'],
-  '/dashboard/comparator': ['Comparador'],
-  '/dashboard/settings': ['Ajustes'],
-};
+// Breadcrumbs are now dynamically generated from translations
+const getBreadcrumbs = (t: any) => ({
+  '/dashboard': [t.sidebar.metrics],
+  '/dashboard/kpis': [t.sidebar.kpis],
+  '/dashboard/workers': [t.sidebar.workers],
+  '/dashboard/comparator': [t.sidebar.comparator],
+  '/dashboard/settings': [t.sidebar.settings],
+});
 
 const LANG_FLAGS: Record<string, string> = {
   es: '🇪🇸', en: '🇺🇸', fr: '🇫🇷', it: '🇮🇹', pt: '🇵🇹'
@@ -65,7 +66,8 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
   }, []);
 
   const selectedBusiness = linkedBusinesses.find(b => b.business_id === selectedBusinessId);
-  const breadcrumb = BREADCRUMBS[location.pathname] || ['Hub'];
+  const breadcrumbs = getBreadcrumbs(t);
+  const breadcrumb = (breadcrumbs as any)[location.pathname] || ['Hub'];
   const initials = (user?.email?.[0] || 'H').toUpperCase();
 
   return (
@@ -174,7 +176,7 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
             <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-100 rounded-xl shadow-xl py-2 z-50 animate-fade-in">
               <div className="px-4 py-3 border-b border-slate-100">
                 <p className="text-xs font-bold text-slate-900 truncate">{user?.email}</p>
-                <p className="text-[10px] text-slate-500 font-bold mt-0.5">Hub Owner</p>
+                <p className="text-[10px] text-slate-500 font-bold mt-0.5">{t.settings.account}</p>
               </div>
               <Link
                 to="/dashboard/settings"

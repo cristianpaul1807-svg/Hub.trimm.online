@@ -72,7 +72,7 @@ export default function Landing() {
               <div className="w-3 h-3 rounded-full bg-amber-400"></div>
               <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
             </div>
-            <span className="text-[10px] text-slate-300 uppercase tracking-widest font-black">trimm hub intelligence</span>
+            <span className="text-[10px] text-slate-300 uppercase tracking-widest font-black">{t.meta.siteTitle}</span>
           </div>
 
           <div className="space-y-8">
@@ -198,7 +198,7 @@ export default function Landing() {
             <span className="material-symbols-outlined notranslate text-xl" translate="no">lightbulb</span>
           </div>
           <p className="text-xs text-slate-600 font-bold leading-tight">
-            Toca el menú de tu navegador → "Añadir a la pantalla de inicio" para instalar la aplicación en tu móvil.
+            {t.landing.pwaDesc}
           </p>
         </div>
       </section>
@@ -223,7 +223,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-slate-500 font-bold">
           <p>{t.footer.copyright}</p>
           <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-full">
-            <span className="text-[10px] uppercase tracking-widest opacity-50">Idioma</span>
+            <span className="text-[10px] uppercase tracking-widest opacity-50">{t.settings.language}</span>
             <div className="flex gap-3">
               {['es', 'en', 'fr', 'it', 'pt'].map((l) => (
                 <button 
