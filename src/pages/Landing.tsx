@@ -207,7 +207,7 @@ export default function Landing() {
       <footer className="bg-slate-900 text-white py-20">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <img src="/hub-logo.png" alt="TRIMM Hub" className="h-10 w-auto brightness-0 invert" />
+            <img src="/hub-logo.png" alt="TRIMM Hub" className="h-12 w-auto" />
             <p className="text-sm text-slate-400 max-w-xs leading-relaxed font-medium">
               {t.footer.description}
             </p>
