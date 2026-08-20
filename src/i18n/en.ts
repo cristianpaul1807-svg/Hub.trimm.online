@@ -46,6 +46,7 @@ export const en = {
     comparator: 'Comparator',
     marketing: 'Marketing',
     campaigns: 'Campaigns',
+    credits: 'Credits',
     billing: 'Billing',
     settings: 'Settings',
     backToHub: 'Back to Hub',

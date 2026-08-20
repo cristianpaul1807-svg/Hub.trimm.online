@@ -1,204 +1,246 @@
+// ============================================================
+// TRIMM Hub — Worker de envío
+//
+// Antes: una invocación intentaba enviar la campaña entera en serie, lo que
+// agotaba el tiempo de ejecución en cuanto la campaña era grande y dejaba
+// el estado colgado en 'sending' para siempre.
+//
+// Ahora: cada invocación reserva un tramo de la cola, lo envía y sale. El
+// cron vuelve a llamar hasta que no queda nada. La reserva usa
+// FOR UPDATE SKIP LOCKED, así que pueden correr varios workers a la vez sin
+// que ninguno envíe lo que ya envió otro.
+//
+// Se puede invocar:
+//   · con { campaign_id }  → drena esa campaña
+//   · sin cuerpo           → busca cualquier campaña pendiente (modo cron)
+// ============================================================
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  corsHeaders, json, RESEND_KEY, MARKETING_FROM,
+  bookingUrl, unsubscribeUrl, unsubscribeHeaders, renderTemplate,
+  type Recipient, type BusinessInfo,
+} from '../_shared/campaign.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const FROM_EMAIL = 'marketing@trimm.online'
-const BATCH_SIZE = 50 // Resend batch limit
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(Deno.env.get('SUPABASE_URL')!, SERVICE_KEY)
 
-const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+// Resend acepta hasta 100 mensajes por llamada al endpoint por lotes.
+const BATCH_SIZE = 100
+// Tope por invocación. Cabe de sobra en el tiempo de una Edge Function y
+// deja margen para que el cron reparta la carga.
+const MAX_PER_INVOCATION = 500
+// Límite por defecto de la cuenta: 2 peticiones por segundo.
+const PAUSE_BETWEEN_BATCHES_MS = 600
+// Margen de seguridad para cerrar limpiamente antes del corte por tiempo.
+const TIME_BUDGET_MS = 50_000
+const MAX_ATTEMPTS = 3
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// ── Email Templates ──────────────────────────────────────────────────
-function buildReengagementEmail(businessName: string, bookingUrl: string) {
-  return {
-    subject: `${businessName} te echa de menos 💙`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-        <div style="background:#1d4ed8;padding:32px;text-align:center">
-          <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900">${businessName}</h1>
-          <p style="color:#bfdbfe;margin:8px 0 0;font-size:14px">Te echamos de menos</p>
-        </div>
-        <div style="padding:32px">
-          <p style="font-size:16px;color:#374151">¡Hola! Hace tiempo que no te vemos.</p>
-          <p style="font-size:14px;color:#6b7280">Reserva tu próxima cita con un solo clic y vuelve a disfrutar de nuestros servicios.</p>
-          <div style="text-align:center;margin:32px 0">
-            <a href="${bookingUrl}" style="background:#1d4ed8;color:#fff;padding:14px 32px;border-radius:100px;text-decoration:none;font-weight:900;font-size:14px">Reservar ahora →</a>
-          </div>
-          <p style="font-size:11px;color:#9ca3af;text-align:center">Powered by TRIMM · <a href="${bookingUrl}/unsubscribe" style="color:#9ca3af">Darse de baja</a></p>
-        </div>
-      </div>
-    `
-  }
-}
-
-function buildDiscountEmail(businessName: string, bookingUrl: string, discountValue: number) {
-  return {
-    subject: `${businessName} — ${discountValue}% de descuento exclusivo para ti 🎁`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-        <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:40px;text-align:center">
-          <p style="color:#bfdbfe;margin:0;font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase">Oferta especial</p>
-          <h1 style="color:#fff;margin:8px 0;font-size:56px;font-weight:900;line-height:1">${discountValue}%</h1>
-          <p style="color:#c4b5fd;margin:0;font-size:15px">de descuento en ${businessName}</p>
-        </div>
-        <div style="padding:32px">
-          <p style="font-size:14px;color:#6b7280;text-align:center">Esta oferta es exclusiva para ti. Reserva antes de que expire.</p>
-          <div style="text-align:center;margin:28px 0">
-            <a href="${bookingUrl}" style="background:#1d4ed8;color:#fff;padding:14px 32px;border-radius:100px;text-decoration:none;font-weight:900;font-size:14px">Reservar con ${discountValue}% dto →</a>
-          </div>
-          <p style="font-size:11px;color:#9ca3af;text-align:center">Powered by TRIMM · <a href="${bookingUrl}/unsubscribe" style="color:#9ca3af">Darse de baja</a></p>
-        </div>
-      </div>
-    `
-  }
-}
-
-function buildLoyaltyEmail(businessName: string, loyaltyUrl: string) {
-  return {
-    subject: `Tu tarjeta de fidelidad en ${businessName} te espera 🪙`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-        <div style="background:linear-gradient(135deg,#064e3b,#1d4ed8);padding:40px;text-align:center">
-          <div style="font-size:48px;margin-bottom:8px">🪙</div>
-          <h1 style="color:#fff;margin:0;font-size:22px;font-weight:900">Programa de fidelidad</h1>
-          <p style="color:#a7f3d0;margin:8px 0 0;font-size:14px">${businessName}</p>
-        </div>
-        <div style="padding:32px">
-          <p style="font-size:15px;color:#374151;text-align:center">Cada visita suma puntos. Cuantos más puntos, más beneficios exclusivos para ti.</p>
-          <div style="text-align:center;margin:28px 0">
-            <a href="${loyaltyUrl}" style="background:#059669;color:#fff;padding:14px 32px;border-radius:100px;text-decoration:none;font-weight:900;font-size:14px">Activar mi tarjeta →</a>
-          </div>
-          <p style="font-size:11px;color:#9ca3af;text-align:center">Powered by TRIMM · <a href="${loyaltyUrl}/unsubscribe" style="color:#9ca3af">Darse de baja</a></p>
-        </div>
-      </div>
-    `
-  }
-}
-
-// ── Main Handler ─────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  const startedAt = Date.now()
+
   try {
-    const authHeader = req.headers.get('Authorization')!
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (authError || !user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
-
-    const { campaign_id } = await req.json()
-
-    // Load campaign
-    const { data: campaign, error: campErr } = await supabase
-      .from('hub_campaigns')
-      .select('*')
-      .eq('id', campaign_id)
-      .eq('hub_owner_id', user.id)
-      .eq('status', 'paid')
-      .single()
-
-    if (campErr || !campaign) {
-      return new Response(JSON.stringify({ error: 'Campaign not found or not paid' }), { status: 404, headers: corsHeaders })
+    if (!RESEND_KEY) {
+      return json({ error: 'Falta la clave de Resend en la configuración' }, 500)
     }
 
-    // Mark as sending
-    await supabase.from('hub_campaigns').update({ status: 'sending', sent_at: new Date().toISOString() }).eq('id', campaign_id)
+    const authHeader = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
+    const isService = authHeader === SERVICE_KEY
 
-    // Get business slugs for URLs
-    const { data: businesses } = await supabase
-      .from('businesses')
-      .select('id, name, slug')
-      .in('id', campaign.target_business_ids)
+    let body: { campaign_id?: string } = {}
+    try { body = await req.json() } catch { /* el cron llama sin cuerpo */ }
 
-    // Collect unique client emails
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('email, name, business_id')
-      .in('business_id', campaign.target_business_ids)
-      .not('email', 'is', null)
-      .neq('email', '')
-      .limit(campaign.recipients_count)
+    // ── Elegir campaña ────────────────────────────────────────────────
+    let campaignId = body.campaign_id ?? null
 
-    if (!clients || clients.length === 0) {
-      await supabase.from('hub_campaigns').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', campaign_id)
-      return new Response(JSON.stringify({ success: true, sent: 0 }), { headers: corsHeaders })
+    if (!isService) {
+      // Invocación desde el navegador: sólo sobre campañas propias.
+      const { data: { user } } = await supabase.auth.getUser(authHeader)
+      if (!user) return json({ error: 'Unauthorized' }, 401)
+      if (!campaignId) return json({ error: 'Falta campaign_id' }, 400)
+
+      const { data: owned } = await supabase
+        .from('hub_campaigns').select('id')
+        .eq('id', campaignId).eq('hub_owner_id', user.id).maybeSingle()
+      if (!owned) return json({ error: 'Campaña no encontrada' }, 404)
     }
 
-    // Deduplicate emails
-    const uniqueClients = Array.from(new Map(clients.map(c => [c.email, c])).values())
-    const toSend = uniqueClients.slice(0, campaign.recipients_count)
+    if (!campaignId) {
+      // Modo cron: la campaña encolada más antigua que siga teniendo trabajo.
+      const { data: pending } = await supabase
+        .from('hub_campaigns')
+        .select('id')
+        .in('status', ['queued', 'sending'])
+        .order('queued_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
 
+      if (!pending) return json({ success: true, idle: true })
+      campaignId = pending.id
+    }
+
+    // ── Cargar campaña y sucursales ───────────────────────────────────
+    const { data: campaign } = await supabase
+      .from('hub_campaigns').select('*').eq('id', campaignId).single()
+
+    if (!campaign) return json({ error: 'Campaña no encontrada' }, 404)
+    if (!['queued', 'sending'].includes(campaign.status)) {
+      return json({ success: true, skipped: `estado ${campaign.status}` })
+    }
+
+    const { data: businessRows } = await supabase
+      .from('businesses').select('id, name, slug').in('id', campaign.target_business_ids)
+
+    const businesses = new Map<string, BusinessInfo>(
+      (businessRows ?? []).map((b: BusinessInfo) => [b.id, b]),
+    )
+
+    await supabase.from('hub_campaigns').update({
+      status: 'sending',
+      sent_at: campaign.sent_at ?? new Date().toISOString(),
+    }).eq('id', campaignId)
+
+    // ── Drenar la cola ────────────────────────────────────────────────
+    let processed = 0
     let sent = 0
-    let bounced = 0
+    let failed = 0
 
-    // Send in batches
-    for (let i = 0; i < toSend.length; i += BATCH_SIZE) {
-      const batch = toSend.slice(i, i + BATCH_SIZE)
+    while (processed < MAX_PER_INVOCATION && Date.now() - startedAt < TIME_BUDGET_MS) {
+      const { data: batch, error: claimErr } = await supabase.rpc('hub_claim_recipient_batch', {
+        p_campaign_id: campaignId,
+        p_limit: BATCH_SIZE,
+      })
 
-      const emails = batch.map((client) => {
-        const biz = businesses?.find(b => b.id === client.business_id) ?? businesses?.[0]
+      if (claimErr) {
+        console.error('claim failed', claimErr)
+        break
+      }
+
+      const recipients = (batch ?? []) as Recipient[]
+      if (recipients.length === 0) break
+
+      const payload = recipients.map((r) => {
+        const biz = businesses.get(r.business_id) ?? businessRows?.[0]
         const bizName = biz?.name ?? 'TRIMM'
-        const bookingUrl = `${Deno.env.get('APP_URL') ?? 'https://trimm.online'}/b/${biz?.slug ?? ''}`
-        const loyaltyUrl = `${bookingUrl}/loyalty`
-
-        let emailContent
-        if (campaign.template_type === 'reengagement') {
-          emailContent = buildReengagementEmail(bizName, bookingUrl)
-        } else if (campaign.template_type === 'discount') {
-          emailContent = buildDiscountEmail(bizName, bookingUrl, campaign.discount_value ?? 10)
-        } else {
-          emailContent = buildLoyaltyEmail(bizName, loyaltyUrl)
-        }
+        const tpl = renderTemplate(campaign.template_type, {
+          businessName: bizName,
+          bookingUrl: bookingUrl(biz, r.unsubscribe_token),
+          unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
+          clientName: r.client_name,
+          discountValue: campaign.discount_value ?? undefined,
+        })
 
         return {
-          from: `${bizName} vía TRIMM <${FROM_EMAIL}>`,
-          to: [client.email],
-          subject: emailContent.subject,
-          html: emailContent.html,
+          from: `${bizName} <${MARKETING_FROM}>`,
+          to: [r.email],
+          subject: campaign.custom_subject || tpl.subject,
+          html: tpl.html,
+          headers: unsubscribeHeaders(r.unsubscribe_token),
         }
       })
 
-      // Send batch via Resend
-      const res = await fetch('https://api.resend.com/emails/batch', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(emails),
-      })
+      let results: Array<{ id?: string }> = []
+      let batchOk = false
 
-      if (res.ok) {
-        sent += batch.length
-      } else {
-        const errBody = await res.json()
-        console.error('Resend batch error:', errBody)
-        bounced += batch.length
+      try {
+        const res = await fetch('https://api.resend.com/emails/batch', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
+
+        if (res.ok) {
+          const parsed = await res.json()
+          results = parsed?.data ?? []
+          batchOk = true
+        } else {
+          console.error('Resend rechazó el lote:', res.status, await res.text())
+        }
+      } catch (e) {
+        console.error('Resend inaccesible:', e)
+      }
+
+      // ── Anotar el resultado de cada destinatario ────────────────────
+      for (let i = 0; i < recipients.length; i++) {
+        const r = recipients[i]
+
+        if (batchOk) {
+          await supabase.rpc('hub_mark_recipient', {
+            p_recipient_id: r.id,
+            p_status: 'sent',
+            p_resend_email_id: results[i]?.id ?? null,
+            p_error: null,
+          })
+          sent++
+        } else {
+          // El fallo es del lote entero, no de esta dirección. Vuelve a la
+          // cola salvo que ya haya agotado los reintentos.
+          const { data: current } = await supabase
+            .from('hub_campaign_recipients').select('attempts').eq('id', r.id).single()
+
+          const exhausted = (current?.attempts ?? 0) >= MAX_ATTEMPTS
+          await supabase.rpc('hub_mark_recipient', {
+            p_recipient_id: r.id,
+            p_status: exhausted ? 'failed' : 'queued',
+            p_resend_email_id: null,
+            p_error: exhausted ? 'Resend no aceptó el envío tras varios intentos' : null,
+          })
+          if (exhausted) failed++
+        }
+      }
+
+      processed += recipients.length
+
+      // Si el lote falló, no insistas de inmediato: da margen a que se
+      // recupere lo que sea que esté fallando.
+      await sleep(batchOk ? PAUSE_BETWEEN_BATCHES_MS : PAUSE_BETWEEN_BATCHES_MS * 4)
+    }
+
+    // ── Cierre ────────────────────────────────────────────────────────
+    // hub_refresh_campaign_stats marca la campaña como completada por sí
+    // sola cuando ya no queda nadie en cola.
+    const { data: stats } = await supabase.rpc('hub_refresh_campaign_stats', {
+      p_campaign_id: campaignId,
+    })
+
+    const pendingLeft = Number(stats?.pending ?? 0)
+
+    if (pendingLeft === 0) {
+      // Devolver el saldo de los envíos que se reservaron pero no salieron.
+      const reserved = Number(campaign.credits_reserved ?? 0)
+      const actuallySent = Number(stats?.sent ?? 0)
+      const unused = reserved - actuallySent
+
+      if (unused > 0) {
+        await supabase.rpc('hub_refund_credits', {
+          p_hub_owner_id: campaign.hub_owner_id,
+          p_credits: unused,
+          p_campaign_id: campaignId,
+          p_note: 'Envíos reservados que no llegaron a salir',
+        })
       }
     }
 
-    // Update stats and campaign status
-    const openRate = 0 // Real open tracking requires Resend webhooks (future)
-    await supabase.from('hub_campaign_stats').upsert({
-      campaign_id,
-      emails_sent: sent,
-      emails_bounced: bounced,
-      emails_opened: 0,
-      open_rate: openRate,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'campaign_id' })
-
-    await supabase.from('hub_campaigns').update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      recipients_count: sent,
-    }).eq('id', campaign_id)
-
-    return new Response(JSON.stringify({ success: true, sent, bounced }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    return json({
+      success: true,
+      campaign_id: campaignId,
+      processed,
+      sent,
+      failed,
+      pending: pendingLeft,
+      done: pendingLeft === 0,
     })
 
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders })
+    return json({ error: err?.message ?? 'Error inesperado' }, 500)
   }
 })

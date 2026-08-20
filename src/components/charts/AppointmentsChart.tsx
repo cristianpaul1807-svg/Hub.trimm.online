@@ -1,6 +1,5 @@
-import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 interface ComparatorChartProps {
@@ -26,7 +25,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export default function AppointmentsChart({ data, metricLabel, prefix = '', loading }: ComparatorChartProps) {
+export default function AppointmentsChart({ data, metricLabel, prefix: _prefix = '', loading }: ComparatorChartProps) {
   if (loading) {
     return (
       <div className="bg-hubSurface border border-hubBorder rounded-2xl p-6 animate-pulse">

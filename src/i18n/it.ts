@@ -48,6 +48,7 @@ export const it: HubTranslations = {
     comparator: 'Comparatore',
     marketing: 'Marketing',
     campaigns: 'Campagne',
+    credits: 'Saldo',
     billing: 'Fatturazione',
     settings: 'Impostazioni',
     backToHub: 'Torna all\'Hub',

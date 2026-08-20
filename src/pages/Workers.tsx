@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';

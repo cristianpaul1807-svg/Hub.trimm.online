@@ -1,101 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useHubAuth } from '../../contexts/HubAuthContext';
 import { supabase } from '../../lib/supabase';
-import BudgetSlider from '../../components/marketing/BudgetSlider';
+import ReachSelector from '../../components/marketing/ReachSelector';
 import CampaignStatusBadge from '../../components/marketing/CampaignStatusBadge';
-import PaymentRequiredBanner from '../../components/marketing/PaymentRequiredBanner';
+import {
+  CreditSummary, EMPTY_SUMMARY, fetchCreditSummary, formatCredits,
+} from '../../lib/credits';
 
 type TemplateType = 'reengagement' | 'discount' | 'loyalty';
 type Step = 1 | 2 | 3;
 
-const TEMPLATE_INFO: Record<TemplateType, { icon: string; title: string; desc: string; multiTarget: boolean }> = {
-  reengagement: { icon: 'person_heart', title: 'Recuperar clientes', desc: 'Dirige la campaña a clientes que cancelaron en los últimos 30 días.', multiTarget: true },
-  discount:     { icon: 'local_offer',  title: 'Campaña de descuento', desc: 'Envía un código de descuento personalizado para que reserven.', multiTarget: true },
-  loyalty:      { icon: 'loyalty',      title: 'Fidelización', desc: 'Invita a tus clientes a unirse al programa de puntos. Solo por sucursal.', multiTarget: false },
+const TEMPLATE_INFO: Record<TemplateType, {
+  icon: string; title: string; desc: string; multiTarget: boolean;
+}> = {
+  reengagement: {
+    icon: 'person_heart',
+    title: 'Recuperar clientes',
+    desc: 'Va dirigida a quienes cancelaron una cita en los últimos 30 días.',
+    multiTarget: true,
+  },
+  discount: {
+    icon: 'local_offer',
+    title: 'Campaña de descuento',
+    desc: 'Envía un descuento personalizado para que vuelvan a reservar.',
+    multiTarget: true,
+  },
+  loyalty: {
+    icon: 'loyalty',
+    title: 'Fidelización',
+    desc: 'Invita a tus clientes al programa de puntos. Una sucursal cada vez.',
+    multiTarget: false,
+  },
 };
 
 export default function Campaigns() {
   const { user } = useHubAuth();
+
   const [step, setStep] = useState<Step>(1);
   const [showCreator, setShowCreator] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [linkedBusinesses, setLinkedBusinesses] = useState<any[]>([]);
-  const [billing, setBilling] = useState<any>(null);
+  const [summary, setSummary] = useState<CreditSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form state
+  // Formulario
   const [template, setTemplate] = useState<TemplateType>('discount');
   const [targetAll, setTargetAll] = useState(true);
   const [selectedBizIds, setSelectedBizIds] = useState<string[]>([]);
   const [discountValue, setDiscountValue] = useState(15);
-  const [budget, setBudget] = useState(25);
-  const [recipientCount, setRecipientCount] = useState(0);
+  const [audience, setAudience] = useState(0);
+  const [reach, setReach] = useState(0);
   const [countLoading, setCountLoading] = useState(false);
 
-  useEffect(() => {
+  const loadAll = useCallback(async () => {
     if (!user) return;
-    const fetch = async () => {
-      const [{ data: bil }, { data: camps }, { data: biz }] = await Promise.all([
-        supabase.from('hub_billing').select('*').eq('hub_owner_id', user.id).maybeSingle(),
-        supabase.from('hub_campaigns').select('*, hub_campaign_stats(*)').eq('hub_owner_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('hub_connections').select('business_id, businesses(name, slug)').eq('hub_owner_id', user.id),
-      ]);
-      setBilling(bil);
-      setCampaigns(camps ?? []);
-      setLinkedBusinesses(biz ?? []);
-      if (biz?.length) setSelectedBizIds(biz.map((b: any) => b.business_id));
-      setLoading(false);
-    };
-    fetch();
+    const [{ data: camps }, { data: biz }, sum] = await Promise.all([
+      supabase.from('hub_campaigns')
+        .select('*, hub_campaign_stats(*)')
+        .eq('hub_owner_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('hub_connections')
+        .select('business_id, marketing_allowed, businesses(name, slug)')
+        .eq('hub_owner_id', user.id),
+      fetchCreditSummary().catch(() => EMPTY_SUMMARY),
+    ]);
+
+    setCampaigns(camps ?? []);
+    const allowed = (biz ?? []).filter((b: any) => b.marketing_allowed !== false);
+    setLinkedBusinesses(allowed);
+    if (allowed.length) setSelectedBizIds(allowed.map((b: any) => b.business_id));
+    setSummary(sum);
+    setLoading(false);
   }, [user]);
 
-  // Recalculate recipient count on changes
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Recalcular la audiencia real. Usa la misma función que después decide a
+  // quién se envía, así que la cifra mostrada no puede divergir del envío.
   useEffect(() => {
-    const ids = targetAll ? linkedBusinesses.map(b => b.business_id) : selectedBizIds;
-    if (!ids.length) return;
+    const ids = targetAll ? linkedBusinesses.map((b) => b.business_id) : selectedBizIds;
+    if (!ids.length) { setAudience(0); return; }
+
+    let cancelled = false;
     setCountLoading(true);
+
     supabase.rpc('get_campaign_recipient_count', {
       p_business_ids: ids,
       p_template_type: template,
       p_days_inactive: 30,
     }).then(({ data }) => {
-      setRecipientCount(data ?? 0);
+      if (cancelled) return;
+      const count = Number(data ?? 0);
+      setAudience(count);
+      setReach(Math.min(count, summary.total));
       setCountLoading(false);
     });
-  }, [template, targetAll, selectedBizIds, linkedBusinesses]);
 
-  const hasBilling = billing?.status === 'active';
+    return () => { cancelled = true; };
+  }, [template, targetAll, selectedBizIds, linkedBusinesses, summary.total]);
+
+  const resetCreator = () => {
+    setShowCreator(false);
+    setStep(1);
+    setError('');
+  };
 
   const handleLaunch = async () => {
-    if (!hasBilling) return;
     setSubmitting(true);
     setError('');
-    try {
-      const bizIds = targetAll ? linkedBusinesses.map(b => b.business_id) : selectedBizIds;
-      const estimatedRecipients = Math.min(Math.floor(budget / 0.01), recipientCount);
 
-      const { data, error: fnErr } = await supabase.functions.invoke('hub-create-campaign-payment', {
+    try {
+      const bizIds = targetAll ? linkedBusinesses.map((b) => b.business_id) : selectedBizIds;
+
+      const { data, error: fnErr } = await supabase.functions.invoke('hub-campaign-enqueue', {
         body: {
           template_type: template,
           target_business_ids: bizIds,
-          budget_eur: budget,
-          recipients_count: estimatedRecipients,
           discount_value: template === 'discount' ? discountValue : null,
+          max_recipients: reach,
         },
       });
 
-      if (fnErr || !data?.success) throw new Error(data?.error ?? fnErr?.message ?? 'Error al procesar el pago');
+      if (fnErr && !data) throw new Error('No se pudo contactar con el servicio de campañas.');
+      if (!data?.success) throw new Error(data?.error ?? 'No se pudo lanzar la campaña.');
 
-      // Trigger send
-      await supabase.functions.invoke('hub-send-campaign', { body: { campaign_id: data.campaign_id } });
-
-      // Refresh
-      const { data: camps } = await supabase.from('hub_campaigns').select('*, hub_campaign_stats(*)').eq('hub_owner_id', user!.id).order('created_at', { ascending: false });
-      setCampaigns(camps ?? []);
-      setShowCreator(false);
-      setStep(1);
+      resetCreator();
+      await loadAll();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -103,24 +136,53 @@ export default function Campaigns() {
     }
   };
 
+  const canLaunch = reach > 0 && reach <= summary.total && !submitting;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-black text-white">Campañas de Email</h1>
-        {!showCreator && hasBilling && (
-          <button onClick={() => setShowCreator(true)} className="bg-hubBlue hover:bg-hubBlueHover text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2">
-            <span className="material-symbols-outlined notranslate text-[16px]" translate="no">add</span>
-            Nueva campaña
-          </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-black text-hubText">Campañas de email</h1>
+          <p className="text-xs text-hubText3 font-bold mt-0.5 tabular-nums">
+            {formatCredits(summary.total)} envíos disponibles
+          </p>
+        </div>
+
+        {!showCreator && (
+          <div className="flex gap-2">
+            <Link
+              to="/dashboard/marketing/credits"
+              className="bg-hubSurface2 hover:bg-hubBorder border border-hubBorder text-hubText px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined notranslate text-[16px]" translate="no">add_card</span>
+              Recargar
+            </Link>
+            <button
+              onClick={() => setShowCreator(true)}
+              disabled={linkedBusinesses.length === 0}
+              className="bg-hubBlue hover:bg-hubBlueHover text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined notranslate text-[16px]" translate="no">add</span>
+              Nueva campaña
+            </button>
+          </div>
         )}
       </div>
 
-      {!hasBilling && <PaymentRequiredBanner activeCampaigns={campaigns.filter(c => c.status === 'paused_no_billing').length} />}
+      {!loading && linkedBusinesses.length === 0 && (
+        <div className="bg-hubSurface border border-hubBorder rounded-2xl px-5 py-4">
+          <p className="text-sm font-black text-hubText">No hay sucursales disponibles</p>
+          <p className="text-xs text-hubText2 mt-1 leading-relaxed">
+            Vincula al menos un negocio que haya autorizado el uso comercial de
+            su base de clientes desde{' '}
+            <Link to="/dashboard/settings" className="text-hubBlue font-bold hover:underline">Ajustes</Link>.
+          </p>
+        </div>
+      )}
 
-      {/* ── Campaign Creator ───────────────────────────────────── */}
-      {showCreator && hasBilling && (
-        <div className="bg-hubSurface border border-hubBlue/30 rounded-3xl p-6 space-y-6">
-          {/* Step indicator */}
+      {/* ── Creador ─────────────────────────────────────────────── */}
+      {showCreator && (
+        <div className="bg-hubSurface border border-hubBlue/30 rounded-3xl p-6 space-y-6 shadow-[0_10px_40px_-14px_rgba(37,99,235,0.25)]">
           <div className="flex items-center gap-2">
             {([1, 2, 3] as Step[]).map((s) => (
               <React.Fragment key={s}>
@@ -128,116 +190,167 @@ export default function Campaigns() {
                   ${step >= s ? 'bg-hubBlue text-white' : 'bg-hubSurface2 text-hubText3'}`}>
                   {s}
                 </div>
-                {s < 3 && <div className={`h-0.5 flex-1 rounded-full transition-all ${step > s ? 'bg-hubBlue' : 'bg-hubBorder'}`} />}
+                {s < 3 && (
+                  <div className={`h-0.5 flex-1 rounded-full transition-all ${step > s ? 'bg-hubBlue' : 'bg-hubBorder'}`} />
+                )}
               </React.Fragment>
             ))}
           </div>
 
-          {/* Step 1: Template + Target */}
+          {/* Paso 1 */}
           {step === 1 && (
             <div className="space-y-5">
-              <p className="text-sm font-black text-white">Elige el tipo de campaña</p>
+              <p className="text-sm font-black text-hubText">Elige el tipo de campaña</p>
               <div className="grid grid-cols-1 gap-3">
                 {(Object.entries(TEMPLATE_INFO) as [TemplateType, typeof TEMPLATE_INFO.discount][]).map(([key, info]) => (
-                  <button key={key} onClick={() => setTemplate(key)}
+                  <button
+                    key={key}
+                    onClick={() => setTemplate(key)}
                     className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all
-                      ${template === key ? 'border-hubBlue/60 bg-hubBlueMuted' : 'border-hubBorder bg-hubSurface2 hover:border-hubBlue/30'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${template === key ? 'bg-hubBlue text-white' : 'bg-hubSurface text-hubBlueText'}`}>
+                      ${template === key
+                        ? 'border-hubBlue bg-hubBlue/5'
+                        : 'border-hubBorder bg-hubSurface2 hover:border-hubBlue/40'}`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                      ${template === key ? 'bg-hubBlue text-white' : 'bg-hubSurface text-hubBlue'}`}>
                       <span className="material-symbols-outlined notranslate text-[20px]" translate="no">{info.icon}</span>
                     </div>
-                    <div>
-                      <p className="text-sm font-black text-white">{info.title}</p>
-                      <p className="text-[11px] text-hubText2 mt-0.5">{info.desc}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-hubText">{info.title}</p>
+                      <p className="text-[11px] text-hubText2 mt-0.5 leading-snug">{info.desc}</p>
                     </div>
-                    {template === key && <span className="material-symbols-outlined notranslate text-hubBlue text-[20px] ml-auto" translate="no">check_circle</span>}
+                    {template === key && (
+                      <span className="material-symbols-outlined notranslate text-hubBlue text-[20px] ml-auto shrink-0" translate="no">
+                        check_circle
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
 
-              {/* Target selection */}
               <div className="space-y-3">
-                <p className="text-sm font-black text-white">Sucursales objetivo</p>
-                {TEMPLATE_INFO[template].multiTarget ? (
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => setTargetAll(true)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all ${targetAll ? 'bg-hubBlue text-white border-transparent' : 'bg-hubSurface border-hubBorder text-hubText2'}`}>
+                <p className="text-sm font-black text-hubText">Sucursales objetivo</p>
+                <div className="flex gap-2 flex-wrap">
+                  {TEMPLATE_INFO[template].multiTarget && (
+                    <button
+                      onClick={() => setTargetAll(true)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all
+                        ${targetAll ? 'bg-hubBlue text-white border-transparent' : 'bg-hubSurface border-hubBorder text-hubText2'}`}
+                    >
                       Todas las sucursales
                     </button>
-                    {linkedBusinesses.map((b: any) => (
-                      <button key={b.business_id}
-                        onClick={() => { setTargetAll(false); setSelectedBizIds([b.business_id]); }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all
-                          ${!targetAll && selectedBizIds.includes(b.business_id) ? 'bg-hubBlue text-white border-transparent' : 'bg-hubSurface border-hubBorder text-hubText2'}`}>
-                        {b.businesses?.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex gap-2 flex-wrap">
-                    {linkedBusinesses.map((b: any) => (
-                      <button key={b.business_id}
-                        onClick={() => setSelectedBizIds([b.business_id])}
-                        className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all
-                          ${selectedBizIds.includes(b.business_id) && !targetAll ? 'bg-hubBlue text-white border-transparent' : 'bg-hubSurface border-hubBorder text-hubText2'}`}>
-                        {b.businesses?.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  )}
+                  {linkedBusinesses.map((b: any) => (
+                    <button
+                      key={b.business_id}
+                      onClick={() => { setTargetAll(false); setSelectedBizIds([b.business_id]); }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all
+                        ${!targetAll && selectedBizIds.includes(b.business_id)
+                          ? 'bg-hubBlue text-white border-transparent'
+                          : 'bg-hubSurface border-hubBorder text-hubText2'}`}
+                    >
+                      {b.businesses?.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowCreator(false)} className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 py-3 rounded-xl text-xs font-bold transition-all hover:text-white">Cancelar</button>
-                <button onClick={() => setStep(2)} className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Siguiente →</button>
+                <button onClick={resetCreator}
+                  className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 hover:text-hubText py-3 rounded-xl text-xs font-bold transition-all">
+                  Cancelar
+                </button>
+                <button onClick={() => setStep(2)}
+                  className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                  Siguiente
+                </button>
               </div>
             </div>
           )}
 
-          {/* Step 2: Variables */}
+          {/* Paso 2 */}
           {step === 2 && (
             <div className="space-y-5">
-              <p className="text-sm font-black text-white">Configura los detalles</p>
-              {template === 'discount' && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-hubText2">Porcentaje de descuento</label>
+              <p className="text-sm font-black text-hubText">Configura los detalles</p>
+
+              {template === 'discount' ? (
+                <div className="space-y-3">
+                  <label htmlFor="discount" className="text-xs font-bold text-hubText2">
+                    Porcentaje de descuento
+                  </label>
                   <div className="flex items-center gap-3">
-                    <input type="number" min={5} max={80} value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))}
-                      className="w-24 bg-hubSurface2 border border-hubBorder rounded-xl px-3 py-2.5 text-2xl font-black text-white text-center focus:outline-none focus:border-hubBlue/60" />
-                    <span className="text-2xl font-black text-hubText2">%</span>
+                    <input
+                      id="discount"
+                      type="number" min={5} max={80}
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(Math.max(5, Math.min(80, Number(e.target.value))))}
+                      className="w-24 bg-hubSurface2 border border-hubBorder rounded-xl px-3 py-2.5 text-2xl font-black text-hubText text-center focus:outline-none focus:border-hubBlue"
+                    />
+                    <span className="text-2xl font-black text-hubText3">%</span>
                   </div>
-                  <input type="range" min={5} max={80} step={5} value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))}
-                    className="w-full" style={{ accentColor: '#2563eb' }} />
+                  <input
+                    type="range" min={5} max={80} step={5}
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(Number(e.target.value))}
+                    aria-label="Porcentaje de descuento"
+                    className="w-full" style={{ accentColor: '#2563eb' }}
+                  />
                 </div>
-              )}
-              {template !== 'discount' && (
+              ) : (
                 <div className="bg-hubSurface2 border border-hubBorder rounded-2xl p-4">
-                  <p className="text-xs text-hubText2 font-bold">
+                  <p className="text-xs text-hubText2 font-bold leading-relaxed">
                     {template === 'reengagement'
-                      ? '✅ Los emails se enviarán a clientes con cancelaciones en los últimos 30 días, invitándolos a volver.'
-                      : '✅ Los emails incluirán un enlace para unirse al programa de fidelidad de la sucursal seleccionada.'}
+                      ? 'El correo irá a los clientes que cancelaron una cita en los últimos 30 días, invitándoles a reservar de nuevo.'
+                      : 'El correo incluirá un enlace para unirse al programa de fidelidad de la sucursal elegida.'}
                   </p>
                 </div>
               )}
+
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setStep(1)} className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 py-3 rounded-xl text-xs font-bold hover:text-white transition-all">← Atrás</button>
-                <button onClick={() => setStep(3)} className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Siguiente →</button>
+                <button onClick={() => setStep(1)}
+                  className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 hover:text-hubText py-3 rounded-xl text-xs font-bold transition-all">
+                  Atrás
+                </button>
+                <button onClick={() => setStep(3)}
+                  className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                  Siguiente
+                </button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Budget + Pay */}
+          {/* Paso 3 */}
           {step === 3 && (
             <div className="space-y-5">
-              <p className="text-sm font-black text-white">Presupuesto y pago</p>
-              <BudgetSlider budget={budget} onBudgetChange={setBudget} availableClients={recipientCount} loading={countLoading} />
+              <p className="text-sm font-black text-hubText">Alcance y confirmación</p>
+
+              <ReachSelector
+                audience={audience}
+                balance={summary.total}
+                reach={reach}
+                onReachChange={setReach}
+                loading={countLoading}
+              />
+
               {error && (
-                <div className="bg-hubDanger/10 border border-hubDanger/20 text-hubDanger px-4 py-3 rounded-xl text-xs font-bold">{error}</div>
+                <div className="bg-hubDanger/10 border border-hubDanger/25 text-hubDanger px-4 py-3 rounded-xl text-xs font-bold">
+                  {error}
+                </div>
               )}
+
               <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 py-3 rounded-xl text-xs font-bold hover:text-white transition-all">← Atrás</button>
-                <button onClick={handleLaunch} disabled={submitting || recipientCount === 0}
-                  className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2">
-                  {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : `Pagar €${budget.toFixed(2)} y lanzar →`}
+                <button onClick={() => setStep(2)}
+                  className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 hover:text-hubText py-3 rounded-xl text-xs font-bold transition-all">
+                  Atrás
+                </button>
+                <button
+                  onClick={handleLaunch}
+                  disabled={!canLaunch}
+                  className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                >
+                  {submitting
+                    ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : `Enviar a ${formatCredits(reach)} clientes`}
                 </button>
               </div>
             </div>
@@ -245,42 +358,60 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* ── Campaign List ──────────────────────────────────────── */}
+      {/* ── Historial ───────────────────────────────────────────── */}
       <div className="bg-hubSurface border border-hubBorder rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-hubBorder/40">
-          <p className="text-sm font-black text-white">Historial de campañas</p>
+        <div className="px-5 py-4 border-b border-hubBorder/60">
+          <p className="text-sm font-black text-hubText">Historial de campañas</p>
         </div>
+
         {loading ? (
-          <div className="p-5 space-y-3 animate-pulse">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-hubSurface2 rounded-xl" />)}</div>
+          <div className="p-5 space-y-3 animate-pulse">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-14 bg-hubSurface2 rounded-xl" />
+            ))}
+          </div>
         ) : campaigns.length === 0 ? (
           <div className="py-12 text-center">
             <span className="material-symbols-outlined notranslate text-4xl text-hubText3" translate="no">campaign</span>
-            <p className="text-sm text-hubText3 font-bold mt-3">No hay campañas todavía</p>
+            <p className="text-sm text-hubText3 font-bold mt-3">Todavía no has lanzado ninguna campaña</p>
           </div>
         ) : (
-          <div className="divide-y divide-hubBorder/20">
-            {campaigns.map(c => {
+          <div className="divide-y divide-hubBorder/60">
+            {campaigns.map((c) => {
               const stats = c.hub_campaign_stats?.[0];
               return (
-                <div key={c.id} className="px-5 py-4 flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-hubSurface2 flex items-center justify-center text-hubBlueText shrink-0">
+                <Link
+                  key={c.id}
+                  to={`/dashboard/marketing/campaigns/${c.id}`}
+                  className="px-5 py-4 flex items-center gap-4 hover:bg-hubSurface2 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-hubSurface2 flex items-center justify-center text-hubBlue shrink-0">
                     <span className="material-symbols-outlined notranslate text-[18px]" translate="no">
-                      {c.template_type === 'reengagement' ? 'person_heart' : c.template_type === 'discount' ? 'local_offer' : 'loyalty'}
+                      {TEMPLATE_INFO[c.template_type as TemplateType]?.icon ?? 'mail'}
                     </span>
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-white truncate">
-                        {c.template_type === 'reengagement' ? 'Recuperar clientes' : c.template_type === 'discount' ? `Descuento ${c.discount_value}%` : 'Fidelización'}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-bold text-hubText truncate">
+                        {c.template_type === 'discount'
+                          ? `Descuento ${c.discount_value}%`
+                          : TEMPLATE_INFO[c.template_type as TemplateType]?.title ?? c.template_type}
                       </p>
                       <CampaignStatusBadge status={c.status} />
                     </div>
-                    <p className="text-[10px] text-hubText3 font-bold mt-0.5">
-                      {new Date(c.created_at).toLocaleDateString()} · {c.recipients_count} destinatarios · €{Number(c.budget_eur).toFixed(2)}
-                      {stats?.emails_sent > 0 && ` · ${stats.emails_sent} enviados`}
+                    <p className="text-[10px] text-hubText3 font-bold mt-0.5 tabular-nums">
+                      {new Date(c.created_at).toLocaleDateString('es-ES')}
+                      {' · '}{formatCredits(c.recipients_count ?? 0)} destinatarios
+                      {stats?.emails_sent > 0 && ` · ${formatCredits(stats.emails_sent)} enviados`}
+                      {stats?.open_rate > 0 && ` · ${stats.open_rate}% aperturas`}
                     </p>
                   </div>
-                </div>
+
+                  <span className="material-symbols-outlined notranslate text-hubText3 text-[18px] shrink-0" translate="no">
+                    chevron_right
+                  </span>
+                </Link>
               );
             })}
           </div>

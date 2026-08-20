@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useHubLang } from '../contexts/HubLanguageContext';
 
@@ -134,20 +134,24 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
               </button>
               {marketingOpen && (
                 <div className="pl-4 space-y-1 mt-1">
-                  <Link
-                    to="/dashboard/marketing/campaigns"
-                    onClick={onClose}
-                    className="block px-4 py-2 text-xs font-semibold text-slate-600 hover:text-accent transition-colors"
-                  >
-                    {t.sidebar.campaigns}
-                  </Link>
-                  <Link
-                    to="/dashboard/marketing/billing"
-                    onClick={onClose}
-                    className="block px-4 py-2 text-xs font-semibold text-slate-600 hover:text-accent transition-colors"
-                  >
-                    {t.sidebar.billing}
-                  </Link>
+                  {[
+                    { to: '/dashboard/marketing',           label: t.sidebar.marketing },
+                    { to: '/dashboard/marketing/campaigns', label: t.sidebar.campaigns },
+                    { to: '/dashboard/marketing/credits',   label: t.sidebar.credits ?? 'Saldo' },
+                    { to: '/dashboard/marketing/billing',   label: t.sidebar.billing },
+                  ].map((sub) => (
+                    <Link
+                      key={sub.to}
+                      to={sub.to}
+                      onClick={onClose}
+                      className={`block px-4 py-2 text-xs font-semibold transition-colors
+                        ${location.pathname === sub.to
+                          ? 'text-accent'
+                          : 'text-slate-600 hover:text-accent'}`}
+                    >
+                      {sub.label}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>

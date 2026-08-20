@@ -43,11 +43,20 @@ serve(async (req) => {
       usage: 'off_session',
     })
 
-    // Upsert billing row with customer id (pm will be filled after confirmation)
+    // Se guarda el cliente de Stripe, pero la facturación NO queda activa
+    // hasta que hub-save-payment-method confirme que hay tarjeta de verdad.
+    // Marcarla activa aquí hacía que el Hub creyera tener método de pago
+    // aunque el usuario cerrara el formulario sin introducir la tarjeta.
+    const { data: existing } = await supabase
+      .from('hub_billing')
+      .select('stripe_pm_id')
+      .eq('hub_owner_id', user.id)
+      .maybeSingle()
+
     await supabase.from('hub_billing').upsert({
       hub_owner_id: user.id,
       stripe_customer_id: customerId,
-      status: 'active',
+      status: existing?.stripe_pm_id ? 'active' : 'disconnected',
     }, { onConflict: 'hub_owner_id' })
 
     return new Response(JSON.stringify({

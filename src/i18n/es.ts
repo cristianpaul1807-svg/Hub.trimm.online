@@ -46,6 +46,7 @@ export const es = {
     comparator: 'Comparador',
     marketing: 'Marketing',
     campaigns: 'Campañas',
+    credits: 'Saldo',
     billing: 'Facturación',
     settings: 'Ajustes',
     backToHub: 'Volver al Hub',

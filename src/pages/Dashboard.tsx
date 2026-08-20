@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
@@ -40,7 +40,7 @@ function getPeriodRange(period: Period): { from: Date; to: Date } {
   return { from, to };
 }
 
-function formatCurrency(n: number, currency = '€') {
+function formatCurrency(n: number, _currency = '€') {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return n.toFixed(0);
 }

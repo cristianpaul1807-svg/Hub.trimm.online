@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HubAuthProvider, useHubAuth } from './contexts/HubAuthContext';
 import { HubLanguageProvider } from './contexts/HubLanguageContext';
 import HubLayout from './components/HubLayout';
@@ -12,7 +12,10 @@ const Comparator = lazy(() => import('./pages/Comparator'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Marketing = lazy(() => import('./pages/marketing/Marketing'));
 const Campaigns = lazy(() => import('./pages/marketing/Campaigns'));
+const CampaignDetail = lazy(() => import('./pages/marketing/CampaignDetail'));
+const Credits = lazy(() => import('./pages/marketing/Credits'));
 const Billing = lazy(() => import('./pages/marketing/Billing'));
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
 
 function HubLoader() {
   return (
@@ -48,6 +51,8 @@ function ProtectedDashboard() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/marketing" element={<Marketing />} />
             <Route path="/marketing/campaigns" element={<Campaigns />} />
+            <Route path="/marketing/campaigns/:id" element={<CampaignDetail />} />
+            <Route path="/marketing/credits" element={<Credits />} />
             <Route path="/marketing/billing" element={<Billing />} />
           </Routes>
         </Suspense>
@@ -66,6 +71,8 @@ export default function App() {
               {/* Public */}
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
+              {/* Baja de campañas: se abre desde el pie de los correos, sin sesión */}
+              <Route path="/baja" element={<Unsubscribe />} />
 
               {/* Protected Dashboard */}
               <Route path="/dashboard/*" element={<ProtectedDashboard />} />
