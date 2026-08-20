@@ -28,6 +28,40 @@ export const MARKETING_FROM =
 export const RESEND_KEY =
   Deno.env.get('RESEND_MARKETING_API_KEY') ?? Deno.env.get('RESEND_API_KEY') ?? ''
 
+// Dominio reservado al correo transaccional: recordatorios de cita,
+// confirmaciones y códigos de verificación.
+export const TRANSACTIONAL_DOMAIN =
+  Deno.env.get('TRANSACTIONAL_DOMAIN') ?? 'trimm.online'
+
+/**
+ * Impide que una campaña salga por el dominio transaccional.
+ *
+ * Es el error operativo más caro que se puede cometer aquí: basta con que
+ * alguien deje MARKETING_FROM_EMAIL sin configurar, o lo apunte al dominio
+ * raíz «porque es el que está verificado», para que las quejas de spam de una
+ * campaña comercial empiecen a degradar la entrega de los recordatorios de
+ * cita — que es el producto por el que pagan los negocios.
+ *
+ * Un subdominio propio (marketing.trimm.online) sí vale: mantiene su
+ * reputación separada de la del dominio raíz.
+ */
+export function marketingSenderProblem(): string | null {
+  const domain = MARKETING_FROM.split('@')[1]?.toLowerCase().trim()
+
+  if (!domain) {
+    return `El remitente de marketing no es una dirección válida: "${MARKETING_FROM}"`
+  }
+
+  if (domain === TRANSACTIONAL_DOMAIN.toLowerCase()) {
+    return `El remitente de campañas (${MARKETING_FROM}) usa el dominio transaccional `
+      + `${TRANSACTIONAL_DOMAIN}. Configura MARKETING_FROM_EMAIL en un subdominio propio `
+      + `—por ejemplo campanas@marketing.${TRANSACTIONAL_DOMAIN}— para no arriesgar la `
+      + `entrega de los recordatorios de cita.`
+  }
+
+  return null
+}
+
 export interface Recipient {
   id: string
   client_id: string | null

@@ -18,7 +18,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  corsHeaders, json, RESEND_KEY, MARKETING_FROM,
+  corsHeaders, json, RESEND_KEY, MARKETING_FROM, marketingSenderProblem,
   bookingUrl, unsubscribeUrl, unsubscribeHeaders, renderTemplate,
   type Recipient, type BusinessInfo,
 } from '../_shared/campaign.ts'
@@ -47,6 +47,15 @@ serve(async (req) => {
   try {
     if (!RESEND_KEY) {
       return json({ error: 'Falta la clave de Resend en la configuración' }, 500)
+    }
+
+    // Se comprueba antes de reservar nada de la cola: si el remitente está mal
+    // configurado, la campaña se queda intacta y se puede relanzar en cuanto
+    // se corrija, sin haber gastado saldo ni haber enviado nada.
+    const senderProblem = marketingSenderProblem()
+    if (senderProblem) {
+      console.error(senderProblem)
+      return json({ error: senderProblem }, 500)
     }
 
     const authHeader = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')

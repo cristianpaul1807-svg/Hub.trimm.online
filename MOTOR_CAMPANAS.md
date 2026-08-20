@@ -85,13 +85,43 @@ son el producto principal.
 | Dominio | `trimm.online` | `marketing.trimm.online` |
 | Clave | `RESEND_API_KEY` | `RESEND_MARKETING_API_KEY` |
 | Baja | No lleva | Obligatoria |
+| Seguimiento | Desactivado | Aperturas y clics |
 
-En Resend: añade `marketing.trimm.online` como dominio, publica sus registros
-DNS, y espera a que quede verificado antes de enviar nada.
+El worker se niega a enviar si el remitente de campañas cae en
+`TRANSACTIONAL_DOMAIN`, y lo comprueba **antes** de reservar nada de la cola:
+una configuración equivocada deja la campaña intacta y sin gastar saldo, en
+lugar de quemar la reputación de los recordatorios.
 
-> Al escribir esto, la cuenta de Resend visible desde el proyecto tenía un solo
-> dominio (`trimm-construct...`) sin verificar y ningún webhook configurado.
-> Confirma en qué cuenta está producción antes de lanzar la primera campaña.
+#### Estado actual de la cuenta
+
+| Dominio | Estado | Región | Uso |
+|---|---|---|---|
+| `trimm.online` | verificado | `eu-west-1` | Recordatorios, confirmaciones, códigos |
+| `marketing.trimm.online` | **pendiente de DNS** | `eu-west-1` | Campañas del Hub |
+
+`trimm.online` está enviando tráfico real de producción. **No lo uses para
+campañas**: su reputación es la que hace que lleguen los recordatorios de citas.
+
+`marketing.trimm.online` ya está dado de alta en la misma región. Falta
+publicar estos tres registros DNS y verificarlo:
+
+| Tipo | Nombre | Valor | Prioridad |
+|---|---|---|---|
+| TXT | `resend._domainkey.marketing` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7VQqBMWANeOs9YPs2R0gJILX0Cp/e3Ny9hjj9GmLIaUWWv1GmCYxitse/VnnjUiLqW7yES1Q2LoDNEAMtZIJKOwR7vz2MrjTFjCK7QxmXNO99LfRDJiq2+a8Np4IpjJGRB784F/MHNsxQ3pukjTNZcQ8NmuOmS97GZKuvuGPT2wIDAQAB` | — |
+| MX | `send.marketing` | `feedback-smtp.eu-west-1.amazonses.com` | 10 |
+| TXT | `send.marketing` | `v=spf1 include:amazonses.com ~all` | — |
+
+Después, verifica el dominio en Resend y **comprueba que el seguimiento de
+aperturas y clics queda activado**: se solicitó al crearlo pero la cuenta lo
+sigue reportando desactivado, probablemente porque solo se aplica una vez
+verificado el dominio. Sin él no habrá tasa de apertura ni de clic.
+
+#### Clave de API aparte
+
+La cuenta tiene una sola clave, compartida con el correo transaccional. Crea
+una segunda desde el panel de Resend y guárdala en
+`RESEND_MARKETING_API_KEY`: así puedes revocar la de marketing sin dejar sin
+recordatorios a los negocios.
 
 ### 2. Calentar el dominio
 
@@ -107,6 +137,7 @@ Empieza en unos 200 envíos al día y dobla cada dos días durante dos semanas.
 | `RESEND_MARKETING_API_KEY` | Clave de Resend solo para campañas |
 | `RESEND_WEBHOOK_SECRET` | Firma del webhook (`whsec_…`) |
 | `MARKETING_FROM_EMAIL` | Remitente, p. ej. `campanas@marketing.trimm.online` |
+| `TRANSACTIONAL_DOMAIN` | Dominio que **no** puede usarse para campañas (`trimm.online`) |
 | `APP_URL` | Base de los enlaces de reserva (`https://trimm.online`) |
 | `HUB_URL` | Base del enlace de baja (`https://hub.trimm.online`) |
 | `STRIPE_SECRET_KEY` | Cobro de los packs |
