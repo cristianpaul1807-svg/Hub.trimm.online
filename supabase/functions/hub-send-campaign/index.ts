@@ -18,7 +18,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  corsHeaders, json, RESEND_KEY, MARKETING_FROM, marketingSenderProblem,
+  corsHeaders, json, RESEND_KEY, MARKETING_FROM, marketingSenderProblem, replyToFor,
   bookingUrl, unsubscribeUrl, unsubscribeHeaders, renderTemplate,
   type Recipient, type BusinessInfo,
 } from '../_shared/campaign.ts'
@@ -103,7 +103,7 @@ serve(async (req) => {
     }
 
     const { data: businessRows } = await supabase
-      .from('businesses').select('id, name, slug').in('id', campaign.target_business_ids)
+      .from('businesses').select('id, name, slug, email').in('id', campaign.target_business_ids)
 
     const businesses = new Map<string, BusinessInfo>(
       (businessRows ?? []).map((b: BusinessInfo) => [b.id, b]),
@@ -144,9 +144,15 @@ serve(async (req) => {
           discountValue: campaign.discount_value ?? undefined,
         })
 
+        // Las respuestas van al correo del negocio, no al buzón de marketing:
+        // la recepción de marketing.trimm.online está desactivada y nadie la
+        // lee. Quien contesta quiere hablar con su peluquería.
+        const replyTo = replyToFor(biz)
+
         return {
           from: `${bizName} <${MARKETING_FROM}>`,
           to: [r.email],
+          ...(replyTo ? { reply_to: replyTo } : {}),
           subject: campaign.custom_subject || tpl.subject,
           html: tpl.html,
           headers: unsubscribeHeaders(r.unsubscribe_token),

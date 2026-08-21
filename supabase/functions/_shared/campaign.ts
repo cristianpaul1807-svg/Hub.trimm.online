@@ -75,6 +75,26 @@ export interface BusinessInfo {
   id: string
   name: string
   slug: string | null
+  email: string | null
+}
+
+/**
+ * A dónde va la respuesta cuando alguien contesta a una campaña.
+ *
+ * El buzón de marketing.trimm.online no lo lee nadie: la recepción está
+ * desactivada a propósito. Pero la gente responde a estos correos — «¿a qué
+ * hora abrís?», «quiero cambiar la cita» — y quien debe recibir eso es la
+ * peluquería, no TRIMM. El remitente ya sale con su nombre, así que para el
+ * cliente la conversación es con su negocio de siempre.
+ *
+ * Si el negocio no tiene email registrado se devuelve undefined y no se
+ * añade la cabecera: mejor que rebote de forma visible a que la respuesta
+ * desaparezca en un buzón que nadie abre.
+ */
+export function replyToFor(biz: BusinessInfo | undefined): string | undefined {
+  const email = biz?.email?.trim()
+  if (!email || !email.includes('@')) return undefined
+  return email
 }
 
 // ── Enlaces ──────────────────────────────────────────────────────────
