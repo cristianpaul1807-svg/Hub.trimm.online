@@ -1,8 +1,9 @@
-import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HubAuthProvider, useHubAuth } from './contexts/HubAuthContext';
 import { HubLanguageProvider } from './contexts/HubLanguageContext';
 import HubLayout from './components/HubLayout';
+import { trackPageView } from './lib/analytics';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -16,6 +17,23 @@ const CampaignDetail = lazy(() => import('./pages/marketing/CampaignDetail'));
 const Credits = lazy(() => import('./pages/marketing/Credits'));
 const Billing = lazy(() => import('./pages/marketing/Billing'));
 const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
+
+/**
+ * Registra una vista de página en cada cambio de ruta.
+ *
+ * Sin esto, Google Analytics solo vería la primera carga: en una aplicación
+ * de una sola página, navegar de Campañas a Saldo no recarga nada y gtag no
+ * se entera. Va dentro del router para poder leer la ubicación actual.
+ */
+function RouteAnalytics() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search);
+  }, [location.pathname, location.search]);
+
+  return null;
+}
 
 function HubLoader() {
   return (
@@ -66,6 +84,7 @@ export default function App() {
     <HubLanguageProvider>
       <HubAuthProvider>
         <BrowserRouter>
+          <RouteAnalytics />
           <Suspense fallback={<HubLoader />}>
             <Routes>
               {/* Public */}

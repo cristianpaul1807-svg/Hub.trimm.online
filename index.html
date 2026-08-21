@@ -77,6 +77,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <!-- Google Analytics (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-3SNJJVNPEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    // El Hub no hace publicidad: se deniega todo lo relacionado con anuncios
+    // para reducir el rastro que sale hacia Google.
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'granted'
+    });
+
+    // send_page_view: false a propósito. Esto es una aplicación de una sola
+    // página: si gtag enviara la vista por su cuenta, solo registraría la
+    // primera carga y ningún cambio de ruta posterior. Las vistas las manda
+    // src/lib/analytics.ts en cada navegación, y de paso limpia de la URL
+    // los tokens que nunca deben llegar a Google.
+    gtag('config', 'G-3SNJJVNPEM', { send_page_view: false });
+  </script>
 </head>
 <body class="bg-[#f8fafc]">
   <div id="root"></div>
