@@ -1,6 +1,28 @@
 import { Link } from 'react-router-dom';
 import { useHubLang } from '../contexts/HubLanguageContext';
 
+// Canal de contacto para pedir acceso. WhatsApp por delante del correo a
+// propósito: un enlace mailto no hace nada visible en un ordenador sin cliente
+// de correo configurado, y este sector vive en WhatsApp.
+const WHATSAPP_NUMBER = '393290914158';
+const wa = (mensaje: string) =>
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
+
+// Dos mensajes distintos: quien pide acceso desde la portada y quien busca
+// soporte desde el pie no vienen a lo mismo.
+const WHATSAPP_URL = wa('Hola, quiero solicitar acceso a TRIMM Hub para mis negocios.');
+const WHATSAPP_SUPPORT_URL = wa('Hola, necesito ayuda con TRIMM Hub.');
+const SUPPORT_EMAIL = 'soporte@trimm.online';
+const SUPPORT_MAILTO =
+  `mailto:${SUPPORT_EMAIL}?subject=` +
+  encodeURIComponent('Solicitud de acceso a TRIMM Hub');
+
+// Páginas legales de TRIMM. No pude verificar estas rutas desde fuera porque
+// trimm.online devuelve 200 para cualquier URL (es una aplicación de una sola
+// página), así que confírmalas y corrígelas aquí si no coinciden.
+const PRIVACY_URL = 'https://trimm.online/privacidad';
+const TERMS_URL = 'https://trimm.online/terminos';
+
 export default function Landing() {
   const { t, lang, setLang } = useHubLang();
 
@@ -8,9 +30,9 @@ export default function Landing() {
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-accent selection:text-white font-sans">
       {/* Navigation Header */}
       <header className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <img src="/hub-logo.png" alt="TRIMM Logo" className="h-10 w-auto object-contain" />
-        </div>
+        <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="TRIMM Hub — inicio">
+          <img src="/hub-logo.png" alt="TRIMM Hub" className="h-10 w-auto object-contain" />
+        </Link>
 
         <div className="flex items-center gap-6">
           {/* Language Selector */}
@@ -47,62 +69,80 @@ export default function Landing() {
           <p className="text-lg text-slate-500 max-w-lg leading-relaxed font-medium">
             {t.landing.heroSubtitle}
           </p>
-          <div className="flex flex-wrap items-center gap-4 pt-4">
-            <a
-              href="mailto:soporte@trimm.online?subject=Solicitud de acceso a TRIMM Hub"
-              className="bg-accent hover:bg-blue-600 text-white px-10 py-5 rounded-full text-sm font-black tracking-wider uppercase transition-all shadow-xl shadow-accent/30 hover:scale-[1.02] active:scale-95"
-            >
-              {t.landing.ctaPrimary}
-            </a>
-            <Link
-              to="/login"
-              className="text-slate-600 hover:text-accent px-8 py-5 rounded-full text-sm font-bold transition-colors border border-slate-200 hover:border-accent/20"
-            >
-              {t.landing.ctaSecondary}
-            </Link>
+          <div className="space-y-4 pt-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-accent hover:bg-blue-600 text-white px-10 py-5 rounded-full text-sm font-black tracking-wider uppercase transition-all shadow-xl shadow-accent/30 hover:scale-[1.02] active:scale-95"
+              >
+                {t.landing.ctaPrimary}
+              </a>
+              <Link
+                to="/login"
+                className="text-slate-600 hover:text-accent px-8 py-5 rounded-full text-sm font-bold transition-colors border border-slate-200 hover:border-accent/20"
+              >
+                {t.landing.ctaSecondary}
+              </Link>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">
+              {t.landing.ctaEmailFallback}{' '}
+              <a href={SUPPORT_MAILTO} className="text-slate-500 hover:text-accent font-bold underline underline-offset-2">
+                {SUPPORT_EMAIL}
+              </a>
+            </p>
           </div>
         </div>
 
         {/* Visual Mockup */}
-        <div className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-soft relative overflow-hidden group hover:shadow-xl transition-all duration-500">
-          <div className="flex items-center justify-between border-b border-slate-50 pb-6 mb-8">
-            <div className="flex items-center gap-2">
+        <div className="bg-white border border-slate-100 rounded-[32px] p-5 sm:p-8 shadow-soft relative overflow-hidden group hover:shadow-xl transition-all duration-500">
+          <div className="flex items-center justify-between border-b border-slate-50 pb-5 mb-6 sm:pb-6 sm:mb-8 gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <div className="w-3 h-3 rounded-full bg-red-400"></div>
               <div className="w-3 h-3 rounded-full bg-amber-400"></div>
               <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
             </div>
-            <span className="text-[10px] text-slate-300 uppercase tracking-widest font-black">{t.meta.siteTitle}</span>
+            <span className="text-[10px] text-slate-300 uppercase tracking-widest font-black truncate">{t.meta.siteTitle}</span>
           </div>
 
-          <div className="space-y-8">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100/50">
-                <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider mb-2">{t.metrics.totalRevenue}</p>
-                <p className="text-2xl font-black text-slate-900">€24.8k</p>
-                <p className="text-[9px] text-emerald-600 font-black mt-1.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px]">trending_up</span> 12.3%
-                </p>
-              </div>
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100/50">
-                <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider mb-2">{t.metrics.appointments}</p>
-                <p className="text-2xl font-black text-slate-900">412</p>
-                <p className="text-[9px] text-emerald-600 font-black mt-1.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px]">trending_up</span> 8.5%
-                </p>
-              </div>
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100/50">
-                <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider mb-2">{t.metrics.avgTicket}</p>
-                <p className="text-2xl font-black text-slate-900">€60</p>
-                <p className="text-[9px] text-emerald-600 font-black mt-1.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px]">trending_up</span> 3.5%
-                </p>
-              </div>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Tres tarjetas en una columna estrecha: el tamaño de la cifra y el
+                espaciado escalan con el ancho para que ningún número se salga
+                de su recuadro en móvil. min-w-0 evita que el grid se desborde. */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              {[
+                { label: t.metrics.totalRevenue, value: '€24,8k', delta: '12,3%' },
+                { label: t.metrics.appointments, value: '412',    delta: '8,5%' },
+                { label: t.metrics.avgTicket,    value: '€60',    delta: '3,5%' },
+              ].map((kpi) => (
+                <div key={kpi.label} className="min-w-0 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-100/50">
+                  <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider mb-1.5 leading-tight line-clamp-2">
+                    {kpi.label}
+                  </p>
+                  <p
+                    data-kpi-value
+                    className="text-sm sm:text-lg md:text-xl lg:text-2xl font-black text-slate-900 tabular-nums leading-none"
+                  >
+                    {kpi.value}
+                  </p>
+                  {/* Flecha en SVG y no con la fuente de iconos: si esa fuente
+                      tarda o no carga, la ligadura se pinta como la palabra
+                      "trending_up" y vuelve a desbordar la tarjeta. */}
+                  <p className="text-[9px] text-emerald-600 font-black mt-1.5 flex items-center gap-0.5 tabular-nums">
+                    <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 shrink-0 fill-current" aria-hidden="true">
+                      <path d="M6 2 L10.5 9 L1.5 9 Z" />
+                    </svg>
+                    {kpi.delta}
+                  </p>
+                </div>
+              ))}
             </div>
 
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100/50">
-              <div className="flex justify-between items-center mb-6">
-                <p className="text-[10px] text-slate-900 uppercase font-black tracking-widest">{t.comparator.title}</p>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Live data</span>
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-100/50">
+              <div className="flex justify-between items-center mb-5 sm:mb-6 gap-3">
+                <p className="text-[10px] text-slate-900 uppercase font-black tracking-widest truncate">{t.comparator.title}</p>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter shrink-0">Live data</span>
               </div>
               <div className="space-y-4">
                 {[
@@ -111,9 +151,9 @@ export default function Landing() {
                   { name: 'Sucursal Sur', val: '17%', color: 'bg-blue-200' }
                 ].map((item, i) => (
                   <div key={i}>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="font-bold text-slate-600">{item.name}</span>
-                      <span className="font-black text-slate-900">{item.val}</span>
+                    <div className="flex justify-between items-baseline text-xs mb-2 gap-2">
+                      <span className="font-bold text-slate-600 truncate">{item.name}</span>
+                      <span className="font-black text-slate-900 tabular-nums shrink-0">{item.val}</span>
                     </div>
                     <div className="h-2 bg-slate-200/50 rounded-full overflow-hidden">
                       <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: item.val }}></div>
@@ -213,9 +253,9 @@ export default function Landing() {
           </div>
 
           <div className="flex flex-wrap md:justify-end gap-10 text-sm font-bold">
-            <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
-            <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
-            <a href="https://wa.me/393290914158" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">{t.footer.support}</a>
+            <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
+            <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
+            <a href={WHATSAPP_SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">{t.footer.support}</a>
           </div>
         </div>
         

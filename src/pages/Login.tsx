@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,6 +13,37 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetting, setResetting] = useState(false);
+
+  /**
+   * Envía el correo de restablecimiento de contraseña.
+   *
+   * La respuesta es siempre la misma tanto si la cuenta existe como si no:
+   * decir "esa cuenta no existe" convertiría este formulario en una forma
+   * cómoda de averiguar qué correos están registrados.
+   */
+  const handleForgotPassword = async () => {
+    setErrorMsg('');
+    setResetMsg('');
+
+    if (!email.trim()) {
+      setErrorMsg(t.login.resetNeedsEmail);
+      return;
+    }
+
+    setResetting(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      setResetMsg(t.login.resetSent);
+    } catch {
+      setResetMsg(t.login.resetSent);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +111,12 @@ export default function Login() {
             </div>
           )}
 
+          {resetMsg && (
+            <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4 rounded-2xl text-xs font-bold leading-relaxed animate-fade-in">
+              {resetMsg}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1">{t.login.emailLabel}</label>
@@ -95,7 +133,14 @@ export default function Login() {
             <div>
               <div className="flex justify-between items-center mb-2 px-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400">{t.login.passwordLabel}</label>
-                <a href="#" className="text-[10px] text-accent hover:underline font-bold">{t.login.forgotPassword}</a>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetting}
+                  className="text-[10px] text-accent hover:underline font-bold disabled:opacity-50"
+                >
+                  {resetting ? '…' : t.login.forgotPassword}
+                </button>
               </div>
               <input
                 type="password"
