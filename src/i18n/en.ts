@@ -14,7 +14,6 @@ export const en = {
     heroSubtitle: 'Control the performance of each branch, compare employees, and make decisions with real data. In real time.',
     ctaPrimary: 'Request access',
     ctaSecondary: 'Enter the Hub →',
-    ctaEmailFallback: 'Prefer email? Write to us at',
     forWhoTitle: 'Built for multi-business owners',
     chains: 'Chains',
     chainsDesc: '2 or more barbershops under the same brand',

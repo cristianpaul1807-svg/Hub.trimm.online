@@ -14,7 +14,6 @@ export const es = {
     heroSubtitle: 'Controla el rendimiento de cada sucursal, compara empleados y toma decisiones con datos reales. En tiempo real.',
     ctaPrimary: 'Solicitar acceso',
     ctaSecondary: 'Entrar al Hub →',
-    ctaEmailFallback: '¿Prefieres el correo? Escríbenos a',
     forWhoTitle: 'Hecho para propietarios de múltiples negocios',
     chains: 'Cadenas',
     chainsDesc: '2 o más barberías bajo la misma marca',

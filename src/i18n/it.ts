@@ -16,7 +16,6 @@ export const it: HubTranslations = {
     heroSubtitle: 'Monitora le prestazioni di ogni filiale, confronta i dipendenti e prendi decisioni basate su dati reali. In tempo reale.',
     ctaPrimary: 'Richiedi accesso',
     ctaSecondary: 'Entra nel Hub →',
-    ctaEmailFallback: 'Preferisci la email? Scrivici a',
     forWhoTitle: 'Creato per proprietari di più attività',
     chains: 'Catene',
     chainsDesc: '2 o più barbieri sotto lo stesso marchio',

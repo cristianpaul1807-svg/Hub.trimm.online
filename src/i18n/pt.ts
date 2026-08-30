@@ -16,7 +16,6 @@ export const pt: HubTranslations = {
     heroSubtitle: 'Monitore o desempenho de cada sucursal, compare funcionários e tome decisões com dados reais. Em tempo real.',
     ctaPrimary: 'Solicitar acesso',
     ctaSecondary: 'Entrar no Hub →',
-    ctaEmailFallback: 'Preferes o email? Escreve-nos para',
     forWhoTitle: 'Feito para proprietários de múltiplos negócios',
     chains: 'Cadeias',
     chainsDesc: '2 ou mais barbearias sob a mesma marca',

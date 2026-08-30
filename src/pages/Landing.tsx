@@ -1,21 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useHubLang } from '../contexts/HubLanguageContext';
 
-// Canal de contacto para pedir acceso. WhatsApp por delante del correo a
-// propósito: un enlace mailto no hace nada visible en un ordenador sin cliente
-// de correo configurado, y este sector vive en WhatsApp.
+// Soporte por WhatsApp, en el pie. Es el canal que ya usaba el producto y
+// funciona igual en móvil que en escritorio, a diferencia de un mailto.
 const WHATSAPP_NUMBER = '393290914158';
-const wa = (mensaje: string) =>
-  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
-
-// Dos mensajes distintos: quien pide acceso desde la portada y quien busca
-// soporte desde el pie no vienen a lo mismo.
-const WHATSAPP_URL = wa('Hola, quiero solicitar acceso a TRIMM Hub para mis negocios.');
-const WHATSAPP_SUPPORT_URL = wa('Hola, necesito ayuda con TRIMM Hub.');
-const SUPPORT_EMAIL = 'soporte@trimm.online';
-const SUPPORT_MAILTO =
-  `mailto:${SUPPORT_EMAIL}?subject=` +
-  encodeURIComponent('Solicitud de acceso a TRIMM Hub');
+const WHATSAPP_SUPPORT_URL =
+  `https://wa.me/${WHATSAPP_NUMBER}?text=` +
+  encodeURIComponent('Hola, necesito ayuda con TRIMM Hub.');
 
 // Páginas legales de TRIMM. No pude verificar estas rutas desde fuera porque
 // trimm.online devuelve 200 para cualquier URL (es una aplicación de una sola
@@ -69,29 +60,16 @@ export default function Landing() {
           <p className="text-lg text-slate-500 max-w-lg leading-relaxed font-medium">
             {t.landing.heroSubtitle}
           </p>
-          <div className="space-y-4 pt-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-accent hover:bg-blue-600 text-white px-10 py-5 rounded-full text-sm font-black tracking-wider uppercase transition-all shadow-xl shadow-accent/30 hover:scale-[1.02] active:scale-95"
-              >
-                {t.landing.ctaPrimary}
-              </a>
-              <Link
-                to="/login"
-                className="text-slate-600 hover:text-accent px-8 py-5 rounded-full text-sm font-bold transition-colors border border-slate-200 hover:border-accent/20"
-              >
-                {t.landing.ctaSecondary}
-              </Link>
-            </div>
-            <p className="text-xs text-slate-400 font-medium">
-              {t.landing.ctaEmailFallback}{' '}
-              <a href={SUPPORT_MAILTO} className="text-slate-500 hover:text-accent font-bold underline underline-offset-2">
-                {SUPPORT_EMAIL}
-              </a>
-            </p>
+          {/* Una sola llamada a la acción. Antes había dos: la principal abría
+              un correo a soporte, que no es lo que hace el producto, y la
+              secundaria repetía el mismo destino que el botón de la cabecera. */}
+          <div className="pt-4">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 bg-accent hover:bg-blue-600 text-white px-10 py-5 rounded-full text-sm font-black tracking-wider uppercase transition-all shadow-xl shadow-accent/30 hover:scale-[1.02] active:scale-95"
+            >
+              {t.landing.ctaSecondary}
+            </Link>
           </div>
         </div>
 

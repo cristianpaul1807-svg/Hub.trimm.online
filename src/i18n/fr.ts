@@ -16,7 +16,6 @@ export const fr: HubTranslations = {
     heroSubtitle: 'Supervisez la performance de chaque succursale, comparez les employés et prenez des décisions basées sur des données réelles. En temps réel.',
     ctaPrimary: 'Demander un accès',
     ctaSecondary: 'Entrer dans le Hub →',
-    ctaEmailFallback: 'Vous préférez l\'e-mail ? Écrivez-nous à',
     forWhoTitle: 'Conçu pour les propriétaires de plusieurs entreprises',
     chains: 'Chaînes',
     chainsDesc: '2 salons de coiffure ou plus sous la même marque',
