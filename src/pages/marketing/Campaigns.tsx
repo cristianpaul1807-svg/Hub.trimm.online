@@ -63,7 +63,12 @@ export default function Campaigns() {
         .eq('hub_owner_id', user.id)
         .order('created_at', { ascending: false }),
       supabase.from('hub_connections')
-        .select('business_id, marketing_allowed, businesses(name, slug)')
+        // Se piden todas las columnas en lugar de nombrar marketing_allowed:
+        // si se nombra y la migración del motor de campañas todavía no está
+        // aplicada, PostgREST responde error y la página se queda sin
+        // sucursales. Pidiendo '*' la columna llega si existe y, si no,
+        // el filtro de abajo la trata como permitida.
+        .select('*, businesses(name, slug)')
         .eq('hub_owner_id', user.id),
       fetchCreditSummary().catch(() => EMPTY_SUMMARY),
     ]);
