@@ -97,24 +97,20 @@ lugar de quemar la reputación de los recordatorios.
 | Dominio | Estado | Región | Uso |
 |---|---|---|---|
 | `trimm.online` | verificado | `eu-west-1` | Recordatorios, confirmaciones, códigos |
-| `marketing.trimm.online` | **pendiente de DNS** | `eu-west-1` | Campañas del Hub |
+| `marketing.trimm.online` | verificado | `eu-west-1` | Campañas del Hub |
 
 `trimm.online` está enviando tráfico real de producción. **No lo uses para
 campañas**: su reputación es la que hace que lleguen los recordatorios de citas.
 
-`marketing.trimm.online` ya está dado de alta en la misma región. Falta
-publicar estos tres registros DNS y verificarlo:
+`marketing.trimm.online` está verificado con su propio DKIM y su propio
+registro SPF, así que su reputación se construye aparte de la del dominio raíz.
 
-| Tipo | Nombre | Valor | Prioridad |
-|---|---|---|---|
-| TXT | `resend._domainkey.marketing` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7VQqBMWANeOs9YPs2R0gJILX0Cp/e3Ny9hjj9GmLIaUWWv1GmCYxitse/VnnjUiLqW7yES1Q2LoDNEAMtZIJKOwR7vz2MrjTFjCK7QxmXNO99LfRDJiq2+a8Np4IpjJGRB784F/MHNsxQ3pukjTNZcQ8NmuOmS97GZKuvuGPT2wIDAQAB` | — |
-| MX | `send.marketing` | `feedback-smtp.eu-west-1.amazonses.com` | 10 |
-| TXT | `send.marketing` | `v=spf1 include:amazonses.com ~all` | — |
-
-Después, verifica el dominio en Resend y **comprueba que el seguimiento de
-aperturas y clics queda activado**: se solicitó al crearlo pero la cuenta lo
-sigue reportando desactivado, probablemente porque solo se aplica una vez
-verificado el dominio. Sin él no habrá tasa de apertura ni de clic.
+Queda una comprobación en el panel de Resend: que el **seguimiento de aperturas
+y clics** esté activado en ese dominio. Sin él no habrá tasa de apertura ni de
+clic. Y si se activa el seguimiento de clics, hay que confirmar que el
+parámetro `?tc=` sobrevive a la reescritura de enlaces — si no sobrevive,
+desactiva el seguimiento de clics: la atribución de reservas vale más que el
+dato de clic.
 
 #### Clave de API aparte
 
@@ -151,20 +147,27 @@ Empieza en unos 200 envíos al día y dobla cada dos días durante dos semanas.
 
 ### 4. Migraciones
 
-```bash
-# Verificar primero contra un PostgreSQL desechable (no toca producción)
-pnpm test:migrations
+Aplicadas en producción el 31/08/2026:
 
-# Después aplicar en orden
-migrations/20260820_hub_campaign_engine.sql
-migrations/20260820_hub_credits_packs.sql
+```
+migrations/20260820_hub_campaign_engine.sql   ✔ aplicada
+migrations/20260820_hub_credits_packs.sql     ✔ aplicada
+migrations/20260831_hub_drain_cron.sql        ✔ aplicada
 ```
 
-> Las dos migraciones de junio están aplicadas en producción pero **no figuran
-> en el historial de migraciones de Supabase** — se aplicaron a mano. Conviene
+Para verificar cambios antes de tocar producción:
+
+```bash
+pnpm test:migrations   # PostgreSQL desechable, no toca nada real
+```
+
+> Las dos migraciones de junio siguen sin figurar en el historial de
+> migraciones de Supabase — se aplicaron a mano antes de esto. Conviene
 > registrarlas para no perder la trazabilidad que sí tiene el resto de Trimm.
 
 ### 5. Desplegar las funciones
+
+Las siete están desplegadas y probadas en producción:
 
 ```bash
 supabase functions deploy hub-campaign-enqueue
@@ -178,41 +181,55 @@ supabase functions deploy hub-resend-webhook --no-verify-jwt
 supabase functions deploy hub-unsubscribe    --no-verify-jwt
 ```
 
+`hub-send-campaign` reconoce al llamante de servicio por el rol del JWT, no
+por comparar la clave carácter a carácter. La comparación literal fallaba: el
+cron lleva la clave `service_role` heredada del proyecto y a la función se le
+inyecta la que Supabase tenga vigente, que no siempre es la misma cadena. Como
+la función se despliega **con** `verify_jwt`, la pasarela ya ha validado la
+firma antes de que el código lea el rol; un token con el rol falsificado no
+llega siquiera a ejecutarse.
+
 ### 6. Webhook de Resend
 
-Apunta a `https://<ref>.supabase.co/functions/v1/hub-resend-webhook` y
-suscribe: `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`,
-`email.complained`. Guarda el secreto en `RESEND_WEBHOOK_SECRET`.
+Creado y apuntando a
+`https://rdbmobnnhrowlqcdettu.supabase.co/functions/v1/hub-resend-webhook`,
+suscrito a `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`
+y `email.complained`.
 
-Sin esto no hay aperturas, ni rebotes, ni supresión automática: se envía a
+**Falta un paso manual**: guardar el secreto de firma (`whsec_…`) en
+`RESEND_WEBHOOK_SECRET`, en los secretos de Edge Functions de Supabase.
+Mientras esa variable no exista, la función acepta cualquier POST sin
+verificar la firma — cualquiera que conozca la URL podría inventarse
+aperturas, rebotes o quejas.
+
+Sin webhook no hay aperturas, ni rebotes, ni supresión automática: se envía a
 ciegas y la lista se degrada campaña tras campaña.
 
 ### 7. Programar el worker
 
-`pg_cron` ya está instalado. Guarda las credenciales fuera del repositorio y
-programa el drenado de la cola:
+Ya programado: `hub-drain-campaign-queue`, cada minuto. Lo instala
+`migrations/20260831_hub_drain_cron.sql`.
+
+Dos decisiones dentro de esa migración:
+
+- **La clave no está escrita en el fichero.** Se lee de un cron que ya existe
+  en el proyecto, así el repositorio no guarda ningún secreto.
+- **La llamada sólo sale si hay cola.** El `WHERE EXISTS` evita 1.440
+  invocaciones diarias para no hacer nada.
+
+Comprobar que está vivo:
 
 ```sql
-ALTER DATABASE postgres SET app.settings.supabase_url     = 'https://<ref>.supabase.co';
-ALTER DATABASE postgres SET app.settings.service_role_key = '<service_role_key>';
-
-SELECT cron.schedule(
-  'hub-drain-campaign-queue',
-  '* * * * *',
-  $$
-  SELECT net.http_post(
-    url     := current_setting('app.settings.supabase_url') || '/functions/v1/hub-send-campaign',
-    headers := jsonb_build_object(
-      'Content-Type',  'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
-    ),
-    body    := '{}'::jsonb
-  );
-  $$
-);
+SELECT status, return_message, start_time
+FROM cron.job_run_details
+WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'hub-drain-campaign-queue')
+ORDER BY start_time DESC LIMIT 5;
 ```
 
-La bolsa mensual del plan ya queda programada por la propia migración
+Con la cola vacía el resultado correcto es `succeeded / 0 rows`: el guardado
+se cumplió y no se llamó a nadie.
+
+La bolsa mensual del plan la programa la propia migración de créditos
 (`hub-grant-monthly-credits`, día 1 a las 03:00 UTC).
 
 ### 8. Atribución desde Trimm

@@ -39,6 +39,30 @@ const MAX_ATTEMPTS = 3
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+// El cron y la propia función no siempre llevan literalmente la misma clave:
+// los cron guardan la clave service_role heredada del proyecto, mientras que
+// a la función se le inyecta la que Supabase tenga vigente. Comparar cadenas
+// hacía que el cron recibiera 401 y la cola no se drenara nunca.
+//
+// Como esta función se despliega con verify_jwt activo, la pasarela ya ha
+// validado la firma antes de llegar aquí: leer el rol del token es
+// suficiente y no se fía de nada sin verificar.
+function isServiceRoleToken(token: string): boolean {
+  if (!token) return false
+  if (token === SERVICE_KEY) return true
+
+  const parts = token.split('.')
+  if (parts.length !== 3) return false
+
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')))
+    return payload?.role === 'service_role'
+  } catch {
+    return false
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -59,7 +83,7 @@ serve(async (req) => {
     }
 
     const authHeader = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
-    const isService = authHeader === SERVICE_KEY
+    const isService = isServiceRoleToken(authHeader)
 
     let body: { campaign_id?: string } = {}
     try { body = await req.json() } catch { /* el cron llama sin cuerpo */ }
