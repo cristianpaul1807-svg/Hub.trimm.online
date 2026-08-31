@@ -136,14 +136,34 @@ Empieza en unos 200 envíos al día y dobla cada dos días durante dos semanas.
 | `TRANSACTIONAL_DOMAIN` | Dominio que **no** puede usarse para campañas (`trimm.online`) |
 | `APP_URL` | Base de los enlaces de reserva (`https://trimm.online`) |
 | `HUB_URL` | Base del enlace de baja (`https://hub.trimm.online`) |
-| `STRIPE_SECRET_KEY` | Cobro de los packs |
+| `STRIPE_SECRET_KEY` | Cobro de los packs. **Ya configurada**: es la misma clave de producción que cobra las suscripciones Pro de Trimm — los secretos de Edge Functions son del proyecto, y el Hub y Trimm comparten proyecto |
 
 **Frontend** (variables de build):
 
 | Variable | Para qué |
 |---|---|
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Conexión a la base |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | Formularios de tarjeta |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Formularios de tarjeta. Ya desplegada, `pk_live_…`, de la misma cuenta de Stripe |
+
+#### Stripe siempre en producción
+
+El Hub no tiene configuración de Stripe propia: lee `STRIPE_SECRET_KEY` de los
+secretos de Edge Functions, que son del proyecto entero. Es literalmente la
+misma clave con la que Trimm cobra las suscripciones Pro, y es de producción
+(comprobado contra el despliegue). La clave publicable del navegador es
+`pk_live_…` de esa misma cuenta.
+
+Aun así, el camino del dinero no se fía y comprueba dos cosas:
+
+- **Antes de mirar la sesión**, que `STRIPE_SECRET_KEY` sea `sk_live_`/`rk_live_`.
+  Si no lo es, `hub-buy-credits` y `hub-create-setup-intent` devuelven 503 y no
+  cobran ni guardan tarjeta.
+- **Antes de acreditar saldo**, que el propio PaymentIntent venga con
+  `livemode: true`. Cubre el caso de un pago creado antes de un cambio de clave.
+
+El motivo no es teórico: en modo de pruebas un PaymentIntent llega a
+`succeeded` sin que nadie pague. Sin estas dos barreras, un despliegue con la
+clave equivocada regalaría envíos reales.
 
 ### 4. Migraciones
 

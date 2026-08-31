@@ -22,6 +22,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders, json } from '../_shared/campaign.ts'
+import { stripeModeProblem, isLiveObject } from '../_shared/stripe.ts'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' })
 const supabase = createClient(
@@ -33,6 +34,14 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
+    // Antes que nada, y antes incluso de mirar la sesión: si la clave de
+    // Stripe no es de producción, aquí no se cobra ni se acredita nada.
+    const modeProblem = stripeModeProblem()
+    if (modeProblem) {
+      console.error(modeProblem)
+      return json({ error: modeProblem }, 503)
+    }
+
     const authHeader = req.headers.get('Authorization') ?? ''
     const { data: { user }, error: authError } =
       await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
@@ -58,6 +67,11 @@ serve(async (req) => {
       }
       if (pi.status !== 'succeeded') {
         return json({ error: 'El pago aún no se ha completado', status: pi.status }, 402)
+      }
+      // La clave ya se ha comprobado arriba, pero el PaymentIntent pudo
+      // crearse antes de un cambio de clave. Que lo diga Stripe.
+      if (!isLiveObject(pi)) {
+        return json({ error: 'Este pago no es de producción; no se acredita saldo' }, 403)
       }
 
       const { data: granted } = await supabase.rpc('hub_credit_purchase', {
@@ -107,6 +121,9 @@ serve(async (req) => {
     })
 
     if (intent.status === 'succeeded') {
+      if (!isLiveObject(intent)) {
+        return json({ error: 'Este pago no es de producción; no se acredita saldo' }, 403)
+      }
       const { data: granted } = await supabase.rpc('hub_credit_purchase', {
         p_hub_owner_id: user.id,
         p_pack_code: pack.code,
