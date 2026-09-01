@@ -25,6 +25,7 @@ MIGRATION_FILES=(
   20260628_hub_marketing.sql
   20260820_hub_campaign_engine.sql
   20260820_hub_credits_packs.sql
+  20260831_hub_stripe_webhook.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -75,4 +76,11 @@ psql_run "-f $WORK/01_campaign_engine_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Migraciones y motor de campañas verificados."
+echo "→ Ejecutando las comprobaciones del saldo comprado"
+echo
+psql_run "-f $WORK/02_credits_revoke_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
+
+echo
+echo "✓ Migraciones, motor de campañas y saldo verificados."

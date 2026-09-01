@@ -136,6 +136,7 @@ Empieza en unos 200 envíos al día y dobla cada dos días durante dos semanas.
 | `TRANSACTIONAL_DOMAIN` | Dominio que **no** puede usarse para campañas (`trimm.online`) |
 | `APP_URL` | Base de los enlaces de reserva (`https://trimm.online`) |
 | `HUB_URL` | Base del enlace de baja (`https://hub.trimm.online`) |
+| `STRIPE_HUB_WEBHOOK_SECRET` | Firma del webhook de Stripe (`whsec_…`). Sin ella `hub-stripe-webhook` devuelve 503 |
 | `STRIPE_SECRET_KEY` | Cobro de los packs. **Ya configurada**: es la misma clave de producción que cobra las suscripciones Pro de Trimm — los secretos de Edge Functions son del proyecto, y el Hub y Trimm comparten proyecto |
 
 **Frontend** (variables de build):
@@ -144,6 +145,64 @@ Empieza en unos 200 envíos al día y dobla cada dos días durante dos semanas.
 |---|---|
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Conexión a la base |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Formularios de tarjeta. Ya desplegada, `pk_live_…`, de la misma cuenta de Stripe |
+
+#### Qué hay que crear en Stripe: nada de catálogo
+
+No hacen falta productos ni precios. Los packs se cobran con **PaymentIntents
+de importe libre**, y el importe sale de `hub_credit_packs` en la base de
+datos. Cambiar un precio es un `UPDATE`, no un producto nuevo en Stripe, y los
+cuatro packs ya están sembrados por la migración.
+
+Lo único que hay que dar de alta en Stripe es un **webhook**.
+
+| Concepto | Dónde vive | Se cambia en |
+|---|---|---|
+| Packs y precios | `hub_credit_packs` | La base de datos |
+| Cobro | PaymentIntent de importe libre | — |
+| Eventos | `hub-stripe-webhook` | Panel de Stripe |
+
+#### El webhook del Hub
+
+Función `hub-stripe-webhook`, desplegada, esperando su secreto. Da de alta el
+endpoint en Stripe → Developers → Webhooks:
+
+```
+https://rdbmobnnhrowlqcdettu.supabase.co/functions/v1/hub-stripe-webhook
+```
+
+Con estos tres eventos:
+
+```
+payment_intent.succeeded
+charge.refunded
+charge.dispute.created
+```
+
+Y el secreto de firma (`whsec_…`) en `STRIPE_HUB_WEBHOOK_SECRET`, en los
+secretos de Edge Functions de Supabase. **Sin él la función devuelve 503 y no
+procesa nada** — a propósito: este webhook da y quita saldo, así que un POST
+inventado por quien conozca la URL saldría caro. El 503 hace que Stripe
+reintente, de modo que los eventos enviados antes de configurar el secreto se
+recuperan solos.
+
+Es un endpoint aparte del `stripe-webhook` de Trimm, con su propio secreto. Y
+como la cuenta de Stripe es compartida, por aquí pasarán también cobros de las
+suscripciones Pro: todo lo que no lleve `hub_owner_id` y `pack_code` en los
+metadatos se ignora sin tocarlo.
+
+**Por qué importa el primero de los tres eventos.** Hasta ahora el saldo sólo
+se acreditaba si el navegador volvía a llamar tras confirmar el pago. Cerrar la
+pestaña, perder cobertura o quedarse sin batería justo después de pagar dejaba
+el cobro hecho en Stripe y el saldo sin acreditar; el propio frontend lo
+admitía con un «contacta con soporte». `hub_credit_purchase` ya era idempotente
+sobre el PaymentIntent, así que ahora acreditan los dos caminos y gana quien
+llegue primero.
+
+**Y los otros dos.** Comprar 50.000 envíos, lanzar la campaña y pedir la
+devolución salía gratis: el dinero volvía y el saldo se quedaba.
+`hub_revoke_purchase` deja a cero el saldo que quede sin gastar. No lo pone en
+negativo — los correos que ya salieron no vuelven —, pero anota en el libro
+mayor cuánto se retiró y cuánto era ya irrecuperable.
 
 #### Stripe siempre en producción
 
@@ -173,6 +232,7 @@ Aplicadas en producción el 31/08/2026:
 migrations/20260820_hub_campaign_engine.sql   ✔ aplicada
 migrations/20260820_hub_credits_packs.sql     ✔ aplicada
 migrations/20260831_hub_drain_cron.sql        ✔ aplicada
+migrations/20260831_hub_stripe_webhook.sql    ✔ aplicada
 ```
 
 Para verificar cambios antes de tocar producción:
@@ -187,7 +247,7 @@ pnpm test:migrations   # PostgreSQL desechable, no toca nada real
 
 ### 5. Desplegar las funciones
 
-Las siete están desplegadas y probadas en producción:
+Las ocho están desplegadas y probadas en producción:
 
 ```bash
 supabase functions deploy hub-campaign-enqueue
@@ -197,6 +257,7 @@ supabase functions deploy hub-save-payment-method
 supabase functions deploy hub-create-setup-intent
 
 # Estas dos las llaman Resend y los clientes de correo, que no tienen sesión
+supabase functions deploy hub-stripe-webhook --no-verify-jwt
 supabase functions deploy hub-resend-webhook --no-verify-jwt
 supabase functions deploy hub-unsubscribe    --no-verify-jwt
 ```
