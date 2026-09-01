@@ -53,6 +53,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
     metrics: t.sidebar.metrics || 'Metrics',
     kpis: t.sidebar.kpis || 'KPIs',
     analytics: t.sidebar.analytics || 'Analysis',
+    templates: t.sidebar.templates || 'Templates',
     workers: t.sidebar.workers || 'Employees',
     comparator: t.sidebar.comparator || 'Comparator',
   };
@@ -139,6 +140,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
                   {[
                     { to: '/dashboard/marketing',           label: t.sidebar.marketing },
                     { to: '/dashboard/marketing/campaigns', label: t.sidebar.campaigns },
+      { to: '/dashboard/marketing/templates', labelKey: 'templates' },
                     { to: '/dashboard/marketing/credits',   label: t.sidebar.credits ?? 'Saldo' },
                     { to: '/dashboard/marketing/billing',   label: t.sidebar.billing },
                   ].map((sub) => (

@@ -22,6 +22,7 @@ import {
   bookingUrl, unsubscribeUrl, unsubscribeHeaders, renderTemplate,
   type Recipient, type BusinessInfo,
 } from '../_shared/campaign.ts'
+import { renderEmail, type Template, type Brand } from '../_shared/templates.ts'
 
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, SERVICE_KEY)
@@ -126,6 +127,15 @@ serve(async (req) => {
       return json({ success: true, skipped: `estado ${campaign.status}` })
     }
 
+    // Plantilla y marca del grupo, una sola vez para toda la tanda.
+    // Si la campaña es anterior a las plantillas, hub_render_context
+    // devuelve la del sistema equivalente a su template_type.
+    const { data: ctxRow } = await supabase.rpc('hub_render_context', {
+      p_campaign_id: campaignId,
+    })
+    const plantilla: Template | null = ctxRow?.template ?? null
+    const marca: Brand | null = ctxRow?.brand ?? null
+
     const { data: businessRows } = await supabase
       .from('businesses').select('id, name, slug, email').in('id', campaign.target_business_ids)
 
@@ -159,22 +169,38 @@ serve(async (req) => {
 
       const payload = recipients.map((r) => {
         const biz = businesses.get(r.business_id) ?? businessRows?.[0]
-        const bizName = biz?.name ?? 'TRIMM'
-        const tpl = renderTemplate(campaign.template_type, {
-          businessName: bizName,
-          bookingUrl: bookingUrl(biz, r.unsubscribe_token),
-          unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
-          clientName: r.client_name,
-          discountValue: campaign.discount_value ?? undefined,
-        })
+        const bizName = (biz?.name ?? 'TRIMM').trim()
+
+        // Con plantilla se renderiza desde la base de datos; sin ella se cae
+        // a las tres de siempre, que siguen en el código. Ninguna campaña
+        // debe quedarse sin poder enviarse por un fallo de configuración.
+        const tpl = plantilla
+          ? renderEmail(plantilla, {
+              clientName: r.client_name,
+              businessName: bizName,
+              discountValue: campaign.discount_value,
+              bookingUrl: bookingUrl(biz, r.unsubscribe_token),
+              unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
+            }, marca)
+          : renderTemplate(campaign.template_type, {
+              businessName: bizName,
+              bookingUrl: bookingUrl(biz, r.unsubscribe_token),
+              unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
+              clientName: r.client_name,
+              discountValue: campaign.discount_value ?? undefined,
+            })
 
         // Las respuestas van al correo del negocio, no al buzón de marketing:
         // la recepción de marketing.trimm.online está desactivada y nadie la
         // lee. Quien contesta quiere hablar con su peluquería.
         const replyTo = replyToFor(biz)
 
+        // Quien firma es la sucursal, salvo que el grupo haya fijado un
+        // nombre propio: una cadena puede querer firmar siempre igual.
+        const firmante = marca?.from_name?.trim() || bizName
+
         return {
-          from: `${bizName} <${MARKETING_FROM}>`,
+          from: `${firmante} <${MARKETING_FROM}>`,
           to: [r.email],
           ...(replyTo ? { reply_to: replyTo } : {}),
           subject: campaign.custom_subject || tpl.subject,

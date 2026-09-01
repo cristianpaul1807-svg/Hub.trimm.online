@@ -30,6 +30,7 @@ MIGRATION_FILES=(
   20260901_fix_staff_metrics.sql
   20260901_hub_kpis.sql
   20260901_hub_analytics.sql
+  20260902_hub_email_templates.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {

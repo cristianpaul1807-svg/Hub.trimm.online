@@ -17,6 +17,7 @@ const Marketing = lazy(() => import('./pages/marketing/Marketing'));
 const Campaigns = lazy(() => import('./pages/marketing/Campaigns'));
 const CampaignDetail = lazy(() => import('./pages/marketing/CampaignDetail'));
 const Credits = lazy(() => import('./pages/marketing/Credits'));
+const Templates = lazy(() => import('./pages/marketing/Templates'));
 const Billing = lazy(() => import('./pages/marketing/Billing'));
 const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
 
@@ -74,6 +75,7 @@ function ProtectedDashboard() {
             <Route path="/marketing/campaigns" element={<Campaigns />} />
             <Route path="/marketing/campaigns/:id" element={<CampaignDetail />} />
             <Route path="/marketing/credits" element={<Credits />} />
+            <Route path="/marketing/templates" element={<Templates />} />
             <Route path="/marketing/billing" element={<Billing />} />
           </Routes>
         </Suspense>

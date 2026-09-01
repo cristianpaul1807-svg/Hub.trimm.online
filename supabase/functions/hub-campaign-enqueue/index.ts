@@ -37,6 +37,7 @@ serve(async (req) => {
     if (authError || !user) return json({ error: 'Unauthorized' }, 401)
 
     const {
+      template_id,
       template_type,
       target_business_ids,
       discount_value,
@@ -55,10 +56,28 @@ serve(async (req) => {
     )
 
     // ── 1. Campaña en borrador ──────────────────────────────────────
+    // La plantilla debe ser del sistema o del propio grupo. Sin esta
+    // comprobación se podría enviar con la plantilla de otro cliente
+    // pasando su identificador.
+    let plantillaId: string | null = null
+    if (template_id) {
+      const { data: tpl } = await supabase
+        .from('hub_email_templates')
+        .select('id, hub_owner_id, is_system, active')
+        .eq('id', template_id)
+        .maybeSingle()
+
+      if (!tpl || !tpl.active || (!tpl.is_system && tpl.hub_owner_id !== user.id)) {
+        return json({ error: 'La plantilla elegida no está disponible' }, 400)
+      }
+      plantillaId = tpl.id
+    }
+
     const { data: campaign, error: createErr } = await supabase
       .from('hub_campaigns')
       .insert({
         hub_owner_id: user.id,
+        template_id: plantillaId,
         template_type,
         target_business_ids,
         discount_value: template_type === 'discount' ? (discount_value ?? 10) : null,
