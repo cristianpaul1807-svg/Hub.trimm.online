@@ -224,6 +224,31 @@ El motivo no es teórico: en modo de pruebas un PaymentIntent llega a
 `succeeded` sin que nadie pague. Sin estas dos barreras, un despliegue con la
 clave equivocada regalaría envíos reales.
 
+#### Quién puede pedir la audiencia
+
+`hub_resolve_audience` devuelve nombres y correos de clientes: es el dato más
+sensible del sistema. Recibe el id del propietario como parámetro y comprueba
+que las sucursales pedidas le pertenezcan — pero durante un tiempo no comprobó
+que **quien llama sea ese propietario**, y seguía siendo invocable por el rol
+`authenticated` (se revocó de `PUBLIC` y de `anon`, no de `authenticated`, que
+lo conserva por las concesiones por defecto de Supabase).
+
+Cerrado con dos capas, porque una sola se pierde con el tiempo:
+
+1. **Revocado de `authenticated`.** No lo necesita: sus llamantes legítimos son
+   funciones `SECURITY DEFINER` — `get_campaign_recipient_count` para el
+   recuento del interfaz, `hub_materialize_campaign` para el envío — que se
+   ejecutan con los privilegios de su propietario.
+2. **Comprobación dentro.** Con sesión iniciada sólo se puede preguntar por la
+   audiencia propia. Sin sesión (clave de servicio) se confía en el llamante,
+   que ya es código nuestro. Si alguien vuelve a conceder el permiso dentro de
+   un año, la función sigue negándose.
+
+Lo mismo, con menos alcance, en `hub_refresh_campaign_stats`.
+
+Que los identificadores sean UUID no es un control de acceso; sólo hace el
+ataque más incómodo.
+
 ### 4. Migraciones
 
 Aplicadas en producción el 31/08/2026:
@@ -233,6 +258,7 @@ migrations/20260820_hub_campaign_engine.sql   ✔ aplicada
 migrations/20260820_hub_credits_packs.sql     ✔ aplicada
 migrations/20260831_hub_drain_cron.sql        ✔ aplicada
 migrations/20260831_hub_stripe_webhook.sql    ✔ aplicada
+migrations/20260901_hub_audience_access.sql   ✔ aplicada
 ```
 
 Para verificar cambios antes de tocar producción:
