@@ -42,17 +42,31 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
   const userRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
 
+  // Se recarga al cambiar de pantalla, no solo al iniciar sesión.
+  //
+  // La barra superior vive en el layout, así que no se vuelve a montar al
+  // navegar: si el usuario conectaba una sucursal desde Ajustes, el selector
+  // seguía mostrando la lista de antes hasta recargar la página entera —
+  // justo el caso de una cuenta nueva, que conecta su primer negocio y no lo
+  // ve aparecer arriba.
   useEffect(() => {
     if (!user) return;
     const fetchLinked = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('hub_connections')
         .select('business_id, businesses(name, slug)')
         .eq('hub_owner_id', user.id);
-      if (data) setLinkedBusinesses(data as any);
+
+      // Antes el error se descartaba en silencio y el selector se quedaba
+      // vacío sin explicación. Si falla, al menos queda dicho.
+      if (error) {
+        console.error('No se pudieron cargar las sucursales vinculadas:', error.message);
+        return;
+      }
+      setLinkedBusinesses((data ?? []) as any);
     };
     fetchLinked();
-  }, [user]);
+  }, [user, location.pathname]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -94,7 +108,7 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
           >
             <span className="material-symbols-outlined notranslate text-accent text-[16px]" translate="no">corporate_fare</span>
             <span className="max-w-[120px] truncate hidden sm:block">
-              {selectedBusiness ? selectedBusiness.businesses.name : t.topbar.allBranches}
+              {selectedBusiness ? (selectedBusiness.businesses?.name ?? '—') : t.topbar.allBranches}
             </span>
             <span className="material-symbols-outlined notranslate text-slate-400 text-[14px]" translate="no">expand_more</span>
           </button>
@@ -118,7 +132,7 @@ export default function TopBar({ onMenuToggle, selectedBusinessId, onBusinessSel
                     ${selectedBusinessId === b.business_id ? 'text-accent' : 'text-slate-600'}`}
                 >
                   <span className="material-symbols-outlined notranslate text-[16px]" translate="no">storefront</span>
-                  <span className="truncate">{b.businesses.name}</span>
+                  <span className="truncate">{b.businesses?.name ?? '—'}</span>
                 </button>
               ))}
               <div className="border-t border-slate-100 my-1" />
