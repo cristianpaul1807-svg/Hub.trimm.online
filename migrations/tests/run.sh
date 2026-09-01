@@ -29,6 +29,7 @@ MIGRATION_FILES=(
   20260901_hub_audience_access.sql
   20260901_fix_staff_metrics.sql
   20260901_hub_kpis.sql
+  20260901_hub_analytics.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -100,4 +101,11 @@ psql_run "-f $WORK/04_kpis_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Migraciones, motor de campañas, saldo, accesos y KPIs verificados."
+echo "→ Ejecutando las comprobaciones de análisis"
+echo
+psql_run "-f $WORK/05_analytics_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
+
+echo
+echo "✓ Migraciones, motor, saldo, accesos, KPIs y análisis verificados."

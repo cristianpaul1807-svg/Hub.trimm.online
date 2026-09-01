@@ -9,6 +9,7 @@ const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Kpis = lazy(() => import('./pages/Kpis'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 const Workers = lazy(() => import('./pages/Workers'));
 const Comparator = lazy(() => import('./pages/Comparator'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -65,6 +66,7 @@ function ProtectedDashboard() {
           <Routes>
             <Route path="/" element={<Dashboard selectedBusinessId={selectedBusinessId} />} />
             <Route path="/kpis" element={<Kpis selectedBusinessId={selectedBusinessId} />} />
+            <Route path="/analytics" element={<Analytics selectedBusinessId={selectedBusinessId} />} />
             <Route path="/workers" element={<Workers selectedBusinessId={selectedBusinessId} />} />
             <Route path="/comparator" element={<Comparator />} />
             <Route path="/settings" element={<Settings />} />

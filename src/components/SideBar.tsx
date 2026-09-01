@@ -10,6 +10,7 @@ interface SideBarProps {
 const NAV_ITEMS = [
   { to: '/dashboard', icon: 'dashboard', labelKey: 'metrics' },
   { to: '/dashboard/kpis', icon: 'trending_up', labelKey: 'kpis' },
+  { to: '/dashboard/analytics', icon: 'query_stats', labelKey: 'analytics' },
   { to: '/dashboard/workers', icon: 'people', labelKey: 'workers' },
   { to: '/dashboard/comparator', icon: 'compare_arrows', labelKey: 'comparator' },
 ];
@@ -51,6 +52,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
   const labels: Record<string, string> = {
     metrics: t.sidebar.metrics || 'Metrics',
     kpis: t.sidebar.kpis || 'KPIs',
+    analytics: t.sidebar.analytics || 'Analysis',
     workers: t.sidebar.workers || 'Employees',
     comparator: t.sidebar.comparator || 'Comparator',
   };
