@@ -6,11 +6,20 @@ interface MetricCardProps {
   icon: string;
   prefix?: string;
   loading?: boolean;
+  /** Texto que acompaña al porcentaje. Antes estaba fijo en inglés. */
+  deltaLabel?: string;
+  /** Para métricas donde subir es malo, como la tasa de cancelación:
+   *  sin esto un aumento de cancelaciones se pintaba en verde. */
+  invertDelta?: boolean;
 }
 
-export default function MetricCard({ label, value, delta, icon, prefix = '', loading }: MetricCardProps) {
-  const isPositive = delta !== null && delta !== undefined && delta >= 0;
+export default function MetricCard({
+  label, value, delta, icon, prefix = '', loading, deltaLabel, invertDelta = false,
+}: MetricCardProps) {
   const isNeutral = delta === null || delta === undefined;
+  const isUp = !isNeutral && delta >= 0;
+  // Sube o baja es un hecho; que sea bueno o malo depende de la métrica.
+  const isGood = invertDelta ? !isUp : isUp;
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
@@ -35,11 +44,11 @@ export default function MetricCard({ label, value, delta, icon, prefix = '', loa
               {prefix}{value}
             </p>
             {!isNeutral && (
-              <div className={`flex items-center gap-1 text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+              <div className={`flex items-center gap-1 text-xs font-bold ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
                 <span className="material-symbols-outlined notranslate text-[14px]" translate="no">
-                  {isPositive ? 'trending_up' : 'trending_down'}
+                  {isUp ? 'trending_up' : 'trending_down'}
                 </span>
-                {isPositive ? '+' : ''}{delta?.toFixed(1)}% {isPositive ? 'vs last period' : 'vs last period'}
+                {isUp ? '+' : ''}{delta?.toFixed(1)}% {deltaLabel ?? ''}
               </div>
             )}
           </div>

@@ -137,6 +137,17 @@ export const es = {
     notifAlerts: 'Alertas de caída de rendimiento',
     comingSoon: 'Próximamente',
   },
+  kpis: {
+    cancellationRate: 'Tasa de cancelación',
+    comparedTo: 'comparado con el periodo anterior',
+    clientsTitle: 'Clientes del periodo',
+    returningClients: 'Clientes que repiten',
+    retention: 'Tasa de repetición',
+    retentionHelp: 'De los que vinieron, cuántos ya habían venido antes',
+    trendTitle: 'Evolución de los últimos 12 meses',
+    branchesTitle: 'Por sucursal',
+    share: 'Peso',
+  },
   errors: {
     generic: 'Algo salió mal. Inténtalo de nuevo.',
     noData: 'Sin datos para este período',

@@ -139,6 +139,17 @@ export const fr: HubTranslations = {
     notifAlerts: 'Alertes en cas de baisse de performance',
     comingSoon: 'Bientôt disponible',
   },
+  kpis: {
+    cancellationRate: 'Taux d’annulation',
+    comparedTo: 'par rapport à la période précédente',
+    clientsTitle: 'Clients de la période',
+    returningClients: 'Clients qui reviennent',
+    retention: 'Taux de retour',
+    retentionHelp: 'Parmi ceux venus, combien étaient déjà venus',
+    trendTitle: '12 derniers mois',
+    branchesTitle: 'Par établissement',
+    share: 'Part',
+  },
   errors: {
     generic: 'Une erreur est survenue. Veuillez réessayer.',
     noData: 'Aucune donnée pour cette période',

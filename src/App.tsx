@@ -8,6 +8,7 @@ import { trackPageView } from './lib/analytics';
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Kpis = lazy(() => import('./pages/Kpis'));
 const Workers = lazy(() => import('./pages/Workers'));
 const Comparator = lazy(() => import('./pages/Comparator'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -63,7 +64,7 @@ function ProtectedDashboard() {
           <Suspense fallback={<div className="flex items-center justify-center py-20"><img src="/hub-logo.png" alt="TRIMM Business Hub Logo" className="h-12 w-auto" /><div className="w-5 h-5 border-2 border-hubBlue border-t-transparent rounded-full animate-spin" /></div>}>
           <Routes>
             <Route path="/" element={<Dashboard selectedBusinessId={selectedBusinessId} />} />
-            <Route path="/kpis" element={<Dashboard selectedBusinessId={selectedBusinessId} />} />
+            <Route path="/kpis" element={<Kpis selectedBusinessId={selectedBusinessId} />} />
             <Route path="/workers" element={<Workers selectedBusinessId={selectedBusinessId} />} />
             <Route path="/comparator" element={<Comparator />} />
             <Route path="/settings" element={<Settings />} />

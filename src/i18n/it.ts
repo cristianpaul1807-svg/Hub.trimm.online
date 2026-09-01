@@ -139,6 +139,17 @@ export const it: HubTranslations = {
     notifAlerts: 'Avvisi in caso di calo delle prestazioni',
     comingSoon: 'Prossimamente',
   },
+  kpis: {
+    cancellationRate: 'Tasso di cancellazione',
+    comparedTo: 'rispetto al periodo precedente',
+    clientsTitle: 'Clienti del periodo',
+    returningClients: 'Clienti che tornano',
+    retention: 'Tasso di ritorno',
+    retentionHelp: 'Di chi è venuto, quanti erano già venuti prima',
+    trendTitle: 'Ultimi 12 mesi',
+    branchesTitle: 'Per filiale',
+    share: 'Peso',
+  },
   errors: {
     generic: 'Qualcosa è andato storto. Riprova.',
     noData: 'Nessun dato per questo periodo',

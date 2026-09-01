@@ -137,6 +137,17 @@ export const en = {
     notifAlerts: 'Performance drop alerts',
     comingSoon: 'Coming soon',
   },
+  kpis: {
+    cancellationRate: 'Cancellation rate',
+    comparedTo: 'compared with the previous period',
+    clientsTitle: 'Clients in this period',
+    returningClients: 'Returning clients',
+    retention: 'Return rate',
+    retentionHelp: 'Of those who came, how many had been before',
+    trendTitle: 'Last 12 months',
+    branchesTitle: 'By branch',
+    share: 'Share',
+  },
   errors: {
     generic: 'Something went wrong. Try again.',
     noData: 'No data for this period',
