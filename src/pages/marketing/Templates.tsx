@@ -20,7 +20,7 @@ const COLORES = ['#1d4ed8', '#7c3aed', '#059669', '#0f766e', '#dc2626', '#ea580c
 
 export default function Templates() {
   const { user } = useHubAuth();
-  const { t } = useHubLang();
+  const { t, lang } = useHubLang();
 
   const [items, setItems] = useState<EmailTemplate[]>([]);
   const [brand, setBrand] = useState<Brand | null>(null);
@@ -39,7 +39,7 @@ export default function Templates() {
     if (!user) return;
     setLoading(true);
     try {
-      const [tpls, br] = await Promise.all([fetchTemplates(), fetchBrand(user.id)]);
+      const [tpls, br] = await Promise.all([fetchTemplates(lang), fetchBrand(user.id)]);
       setItems(tpls);
       setBrand(br);
       setSel((actual) => actual ?? tpls[0] ?? null);
@@ -48,7 +48,7 @@ export default function Templates() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, lang]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -326,6 +326,18 @@ export default function Templates() {
                 <label className={etiqueta}>{t.templates.cta}</label>
                 <input className={campo} value={draft.cta_label ?? ''} disabled={!editable}
                   onChange={(e) => set('cta_label', e.target.value)} />
+              </div>
+
+              <div>
+                <label className={etiqueta}>{t.templates.ctaUrl}</label>
+                <input className={campo} value={draft.cta_url ?? ''} disabled={!editable}
+                  placeholder={t.templates.ctaUrlPlaceholder}
+                  onChange={(e) => set('cta_url', e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  {draft.cta_url?.trim()
+                    ? t.templates.ctaUrlCustom
+                    : t.templates.ctaUrlHint}
+                </p>
               </div>
 
               <div>

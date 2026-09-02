@@ -23,6 +23,7 @@ export interface Template {
   headline?: string | null
   body: string
   cta_label?: string | null
+  cta_url?: string | null
   accent_color?: string | null
   image_url?: string | null
 }
@@ -41,6 +42,8 @@ export interface RenderContext {
   discountValue?: number | null
   bookingUrl: string
   unsubscribeUrl: string
+  /** El código de la campaña. Es lo que hace real el descuento. */
+  promoCode?: string | null
 }
 
 // ── Escapado ────────────────────────────────────────────────────────
@@ -93,7 +96,7 @@ export function safeColor(color: unknown, fallback = '#1d4ed8'): string {
 // {{cliente}}, {{negocio}} y {{descuento}}. Se sustituyen sobre el texto
 // ya escapado, y los valores se escapan también: el nombre del cliente
 // viene de la ficha, que la escribe una persona.
-const VARIABLES = ['cliente', 'negocio', 'descuento'] as const
+const VARIABLES = ['cliente', 'negocio', 'descuento', 'codigo'] as const
 
 export function fillVariables(text: string, ctx: RenderContext): string {
   const nombre = ctx.clientName?.trim().split(/\s+/)[0]
@@ -101,6 +104,7 @@ export function fillVariables(text: string, ctx: RenderContext): string {
     cliente: escapeHtml(nombre || 'hola'),
     negocio: escapeHtml(ctx.businessName),
     descuento: escapeHtml(String(ctx.discountValue ?? 10)),
+    codigo: escapeHtml(ctx.promoCode ?? ''),
   }
   return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (coincidencia, clave: string) => {
     const k = clave.toLowerCase()
@@ -117,6 +121,7 @@ export function fillSubject(text: string, ctx: RenderContext): string {
     cliente: nombre || '',
     negocio: ctx.businessName,
     descuento: String(ctx.discountValue ?? 10),
+    codigo: ctx.promoCode ?? '',
   }
   return text
     .replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k: string) =>
@@ -144,11 +149,32 @@ function paragraphs(body: string, ctx: RenderContext): string {
 function button(label: string, url: string, color: string): string {
   const href = safeUrl(url)
   if (!href) return ''
+  // safeUrl ya ha filtrado esquemas raros; aquí solo se maqueta.
   // Tabla en lugar de un div: es lo que respeta Outlook.
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px auto 8px;">
     <tr><td align="center" bgcolor="${color}" style="border-radius:100px;">
       <a href="${href}" style="display:inline-block;padding:15px 34px;font-size:14px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:100px;">${escapeHtml(label)}</a>
+    </td></tr>
+  </table>`
+}
+
+/**
+ * La caja con el código de la campaña.
+ *
+ * Grande, seleccionable y en un tipo monoespaciado: la mayoría de la gente
+ * lo va a copiar con el dedo desde el móvil, y unos pocos lo van a dictar
+ * por teléfono. Un código en cuerpo 13 dentro de un párrafo no sirve para
+ * ninguna de las dos cosas.
+ */
+function codeBox(code: string, color: string, etiqueta: string): string {
+  const limpio = escapeHtml(code)
+  if (!limpio) return ''
+  return `
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0 8px;">
+    <tr><td align="center" style="border:2px dashed ${color};border-radius:16px;padding:18px 24px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#94a3b8;">${escapeHtml(etiqueta)}</p>
+      <p style="margin:0;font-size:26px;font-weight:800;letter-spacing:0.08em;color:${color};font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">${limpio}</p>
     </td></tr>
   </table>`
 }
@@ -194,6 +220,32 @@ ${inner}
 </body></html>`
 }
 
+/**
+ * A dónde lleva el botón.
+ *
+ * Por defecto a la reserva de la sucursal, que es además la única URL que
+ * atribuye: lleva el token de la campaña. Si la plantilla pone otra, manda
+ * la suya — pero entonces la atribución depende solo del código, y por eso
+ * la pantalla lo advierte al escribirla.
+ */
+function destino(t: Template, ctx: RenderContext): string {
+  const propia = safeUrl(t.cta_url)
+  return propia || ctx.bookingUrl
+}
+
+/**
+ * Pone la caja del código salvo que la plantilla ya lo coloque ella misma.
+ *
+ * Quien escribe {{codigo}} en el cuerpo lo quiere en un sitio concreto;
+ * añadirle además la caja sería enseñar el código dos veces y dejar al
+ * cliente dudando de cuál de los dos es el bueno.
+ */
+function autoCodeBox(t: Template, ctx: RenderContext, color: string): string {
+  if (!ctx.promoCode) return ''
+  if (/\{\{\s*codigo\s*\}\}/i.test(t.body ?? '')) return ''
+  return codeBox(ctx.promoCode, color, 'Tu código')
+}
+
 // ── Maquetas ────────────────────────────────────────────────────────
 
 function heroLayout(t: Template, ctx: RenderContext, brand: Brand | null | undefined, color: string): string {
@@ -207,7 +259,8 @@ function heroLayout(t: Template, ctx: RenderContext, brand: Brand | null | undef
 ${imagen ? `<tr><td style="padding:0;"><img src="${imagen}" alt="" width="600" style="width:100%;max-width:600px;display:block;border:0;"></td></tr>` : ''}
 <tr><td style="padding:32px;">
   ${paragraphs(t.body, ctx)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), ctx.bookingUrl, color) : ''}
+  ${autoCodeBox(t, ctx, color)}
+  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
 </td></tr>`
 }
 
@@ -222,7 +275,8 @@ function offerLayout(t: Template, ctx: RenderContext, brand: Brand | null | unde
 </td></tr>
 <tr><td style="padding:32px;">
   ${paragraphs(t.body, ctx)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), ctx.bookingUrl, color) : ''}
+  ${autoCodeBox(t, ctx, color)}
+  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
 </td></tr>`
 }
 
@@ -240,7 +294,8 @@ function cardLayout(t: Template, ctx: RenderContext, brand: Brand | null | undef
       ${paragraphs(t.body, ctx)}
     </td></tr>
   </table>
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), ctx.bookingUrl, color) : ''}
+  ${autoCodeBox(t, ctx, color)}
+  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
 </td></tr>`
 }
 
@@ -251,7 +306,8 @@ function plainLayout(t: Template, ctx: RenderContext, brand: Brand | null | unde
 <tr><td style="padding:8px 32px 32px;">
   ${titular ? `<h1 style="color:#0f172a;margin:0 0 16px;font-size:20px;font-weight:800;letter-spacing:-0.02em;">${fillVariables(escapeHtml(titular), ctx)}</h1>` : ''}
   ${paragraphs(t.body, ctx)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), ctx.bookingUrl, color) : ''}
+  ${autoCodeBox(t, ctx, color)}
+  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
 </td></tr>`
 }
 

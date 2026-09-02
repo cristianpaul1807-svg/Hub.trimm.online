@@ -19,10 +19,12 @@ export interface EmailTemplate {
   headline: string | null;
   body: string;
   cta_label: string | null;
+  cta_url: string | null;
   accent_color: string | null;
   image_url: string | null;
   is_system: boolean;
   active: boolean;
+  lang: string;
 }
 
 export interface Brand {
@@ -34,16 +36,25 @@ export interface Brand {
   footer_note: string | null;
 }
 
-/** Las del sistema primero: son el punto de partida. */
-export async function fetchTemplates(): Promise<EmailTemplate[]> {
-  const { data, error } = await supabase
-    .from('hub_email_templates')
-    .select('*')
-    .eq('active', true)
-    .order('is_system', { ascending: false })
-    .order('name');
+/**
+ * El catálogo en el idioma del Hub.
+ *
+ * El filtro por idioma lo hace la base de datos y no el navegador porque el
+ * respaldo tiene que ser por plantilla: si mañana se añade una nueva solo
+ * en español, quien tenga el Hub en italiano debe verla igualmente —en
+ * español— y no quedarse sin ella.
+ *
+ * Y esto no es cosmético. El texto de estas plantillas no decora la
+ * pantalla: es lo que se le manda a los clientes del negocio. Un salón de
+ * Milán no puede escribir a su gente en español porque nosotros sembramos
+ * el catálogo en español.
+ */
+export async function fetchTemplates(lang = 'es'): Promise<EmailTemplate[]> {
+  const { data, error } = await supabase.rpc('hub_templates_for', { p_lang: lang });
   if (error) throw new Error(error.message);
-  return (data ?? []) as EmailTemplate[];
+  return ((data ?? []) as EmailTemplate[])
+    .sort((a, b) =>
+      Number(b.is_system) - Number(a.is_system) || a.name.localeCompare(b.name));
 }
 
 export async function fetchBrand(userId: string): Promise<Brand | null> {
@@ -98,9 +109,11 @@ export async function duplicateTemplate(
       headline: source.headline,
       body: source.body,
       cta_label: source.cta_label,
+      cta_url: source.cta_url,
       accent_color: source.accent_color,
       image_url: source.image_url,
       is_system: false,
+      lang: source.lang,
     })
     .select('*')
     .single();
@@ -121,6 +134,7 @@ export async function saveTemplate(t: EmailTemplate): Promise<void> {
       headline: t.headline,
       body: t.body,
       cta_label: t.cta_label,
+      cta_url: t.cta_url,
       accent_color: t.accent_color,
       image_url: t.image_url,
       updated_at: new Date().toISOString(),
@@ -189,6 +203,7 @@ export async function previewTemplate(
         headline: template.headline,
         body: template.body,
         cta_label: template.cta_label,
+        cta_url: template.cta_url,
         accent_color: template.accent_color,
         image_url: template.image_url,
       },

@@ -137,5 +137,47 @@ const r11 = T.renderEmail(
   { layout: 'plain', subject: 'x', preheader: 'Oferta en {{negocio}}', body: 'y' }, ctx)
 ok('el preencabezado va oculto', r11.html.includes('display:none') && r11.html.includes('Oferta en Salón Centro'))
 
+// ── Código de campaña ───────────────────────────────────────────────
+const ctxCod = { ...ctx, promoCode: 'DTO20-MU5BD' };
+
+const c1 = T.renderEmail({ layout: 'hero', subject: 'x', body: 'Hola' }, ctxCod)
+ok('el código sale solo si hay código',      c1.html.includes('DTO20-MU5BD'))
+ok('y con su etiqueta',                      c1.html.includes('Tu código'))
+
+const c2 = T.renderEmail({ layout: 'hero', subject: 'x', body: 'Hola' }, ctx)
+ok('sin código no se pinta la caja',         !c2.html.includes('Tu código'))
+
+// Si la plantilla lo coloca ella misma, no se pone dos veces: el cliente
+// no debe dudar de cuál de los dos códigos es el bueno.
+const c3 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'Usa {{codigo}} al reservar.' }, ctxCod)
+ok('{{codigo}} se sustituye en el cuerpo',   c3.html.includes('Usa DTO20-MU5BD al reservar'))
+ok('y entonces no se añade la caja',         (c3.html.match(/DTO20-MU5BD/g) || []).length === 1)
+
+const c4 = T.renderEmail({ layout: 'plain', subject: 'Tu código {{codigo}}', body: 'y' }, ctxCod)
+ok('{{codigo}} también en el asunto',        c4.subject === 'Tu código DTO20-MU5BD')
+
+// El código entra en el HTML, así que se escapa como todo lo demás.
+const c5 = T.renderEmail({ layout: 'hero', subject: 'x', body: 'y' },
+                         { ...ctx, promoCode: '<img src=x onerror=alert(1)>' })
+ok('un código con HTML se escapa',           !c5.html.includes('<img src=x'))
+
+// ── Destino del botón ───────────────────────────────────────────────
+const b1 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar' }, ctx)
+ok('sin cta_url el botón va a la reserva',   b1.html.includes('trimm.online/b/salon?tc=abc'))
+
+const b2 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar',
+    cta_url: 'https://prenotazioni.ejemplo.com/salon' }, ctx)
+ok('con cta_url el botón va ahí',            b2.html.includes('prenotazioni.ejemplo.com/salon'))
+ok('y ya no a la reserva',                   !b2.html.includes('?tc=abc'))
+
+const b3 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar',
+    cta_url: 'javascript:alert(1)' }, ctx)
+ok('un cta_url no válido cae a la reserva',  b3.html.includes('trimm.online/b/salon'))
+ok('y no ejecuta nada',                      !b3.html.includes('javascript:'))
+
 console.log(`\n${fallos === 0 ? 'Todas las comprobaciones del renderizador pasan.' : fallos + ' FALLOS'}`)
 process.exit(fallos ? 1 : 0)

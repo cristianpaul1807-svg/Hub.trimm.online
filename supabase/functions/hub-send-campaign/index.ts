@@ -136,6 +136,32 @@ serve(async (req) => {
     const plantilla: Template | null = ctxRow?.template ?? null
     const marca: Brand | null = ctxRow?.brand ?? null
 
+    // ── El código de la campaña ───────────────────────────────────────
+    // Se crea aquí, una vez por campaña y antes del primer envío, para que
+    // todos los correos lleven el mismo. Es idempotente: si el worker
+    // vuelve a entrar —y vuelve, cada tanda es una invocación— devuelve el
+    // que ya existe en lugar de crear otro.
+    //
+    // El tope de canjes es el número de destinatarios: un código filtrado a
+    // un grupo de WhatsApp no debería costar más que la campaña que lo
+    // pagó.
+    //
+    // Si esto falla, la campaña sale igual, sin código. Perder un envío ya
+    // pagado por no poder generar un código sería mucho peor que un correo
+    // sin descuento canjeable, y el fallo queda en el registro.
+    let codigo: string | null = null
+    try {
+      const { data: cod, error: codErr } = await supabase.rpc('hub_create_campaign_code', {
+        p_campaign_id: campaignId,
+        p_max_redemptions: campaign.recipients_count ?? null,
+        p_days_valid: 60,
+      })
+      if (codErr) console.error('No se pudo crear el código de campaña', codErr)
+      else codigo = cod?.code ?? null
+    } catch (e) {
+      console.error('No se pudo crear el código de campaña', e)
+    }
+
     const { data: businessRows } = await supabase
       .from('businesses').select('id, name, slug, email').in('id', campaign.target_business_ids)
 
@@ -181,6 +207,7 @@ serve(async (req) => {
               discountValue: campaign.discount_value,
               bookingUrl: bookingUrl(biz, r.unsubscribe_token),
               unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
+              promoCode: codigo,
             }, marca)
           : renderTemplate(campaign.template_type, {
               businessName: bizName,
@@ -188,6 +215,7 @@ serve(async (req) => {
               unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
               clientName: r.client_name,
               discountValue: campaign.discount_value ?? undefined,
+              promoCode: codigo,
             })
 
         // Las respuestas van al correo del negocio, no al buzón de marketing:

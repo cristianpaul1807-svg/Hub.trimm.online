@@ -106,6 +106,20 @@ serve(async (req) => {
       negocio = (biz as any)?.businesses?.name?.trim() || 'Tu negocio'
     }
 
+    // El código de muestra. El de verdad no existe todavía —se crea al
+    // lanzar la campaña— pero la caja tiene que verse, porque ocupa sitio
+    // en el correo y cambia cómo se lee. Enseñar una vista previa sin ella
+    // y que luego aparezca es exactamente lo que la vista previa evita.
+    //
+    // Lleva el mismo prefijo que llevará el real, para que el ancho y la
+    // pinta sean los que van a salir.
+    const prefijo = campaign_type === 'discount'
+      ? `DTO${Math.round(Number(discount_value) || 10)}`
+      : campaign_type === 'reengagement' ? 'VUELVE'
+      : campaign_type === 'loyalty' ? 'PUNTOS'
+      : 'TRIMM'
+    const codigoMuestra = `${prefijo}-EJEMP`
+
     // Enlaces de ejemplo: la vista previa no debe atribuir reservas ni dar
     // de baja a nadie si alguien pincha.
     const datos = {
@@ -114,6 +128,7 @@ serve(async (req) => {
       discountValue: Number.isFinite(discount_value) ? discount_value : 10,
       bookingUrl: `${APP_URL}/b/ejemplo`,
       unsubscribeUrl: `${HUB_URL}/baja?t=ejemplo`,
+      promoCode: codigoMuestra,
     }
 
     // La misma bifurcación que hace el worker al enviar de verdad: con

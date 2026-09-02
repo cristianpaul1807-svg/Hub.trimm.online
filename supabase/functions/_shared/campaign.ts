@@ -116,6 +116,29 @@ interface TemplateArgs {
   unsubscribeUrl: string
   clientName?: string | null
   discountValue?: number
+  /**
+   * El código de la campaña. Sin él el correo promete un descuento que
+   * nadie puede aplicar: la peluquería no tiene constancia de nada y el
+   * cliente llega con una captura. Con él, el descuento existe de verdad
+   * y se puede canjear también por teléfono o tres días después.
+   */
+  promoCode?: string | null
+}
+
+/**
+ * La caja del código. Grande y monoespaciada porque se copia con el dedo
+ * desde el móvil o se dicta por teléfono; en cuerpo 13 dentro de un
+ * párrafo no sirve para ninguna de las dos cosas.
+ */
+function codeBox(code: string | null | undefined, color: string) {
+  const limpio = String(code ?? '').trim()
+  if (!limpio) return ''
+  return `
+    <div style="margin:24px 0 8px;border:2px dashed ${color};border-radius:16px;padding:18px 24px;text-align:center;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#94a3b8;">Tu código</p>
+      <p style="margin:0;font-size:26px;font-weight:800;letter-spacing:0.08em;color:${color};font-family:'SFMono-Regular',Consolas,Menlo,monospace;">${limpio}</p>
+      <p style="margin:10px 0 0;font-size:12px;color:#64748b;line-height:1.5;">Añádelo al reservar para que se aplique.</p>
+    </div>`
 }
 
 function shell(businessName: string, unsubUrl: string, inner: string) {
@@ -154,6 +177,7 @@ export function buildReengagement(a: TemplateArgs) {
           Nos hemos dado cuenta de que hace un tiempo que no pasas por aquí.
           Tu sitio sigue esperándote — reservar te lleva menos de un minuto.
         </p>
+        ${codeBox(a.promoCode, '#1d4ed8')}
         <div style="text-align:center;margin:32px 0 8px;">
           <a href="${a.bookingUrl}" style="background:#1d4ed8;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Reservar mi cita</a>
         </div>
@@ -177,6 +201,7 @@ export function buildDiscount(a: TemplateArgs) {
           Hemos guardado un ${pct}% de descuento a tu nombre para tu próxima visita.
           Se aplica automáticamente al reservar desde este correo.
         </p>
+        ${codeBox(a.promoCode, '#1d4ed8')}
         <div style="text-align:center;margin:32px 0 8px;">
           <a href="${a.bookingUrl}" style="background:#1d4ed8;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Reservar con ${pct}% dto.</a>
         </div>
@@ -198,6 +223,7 @@ export function buildLoyalty(a: TemplateArgs) {
           Cada visita suma puntos, y cada cierto número de puntos te llevas una
           recompensa. Activar tu tarjeta es gratis y solo se hace una vez.
         </p>
+        ${codeBox(a.promoCode, '#059669')}
         <div style="text-align:center;margin:32px 0 8px;">
           <a href="${a.bookingUrl}" style="background:#059669;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Activar mi tarjeta</a>
         </div>

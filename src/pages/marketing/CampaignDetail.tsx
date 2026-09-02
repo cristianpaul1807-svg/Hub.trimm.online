@@ -45,20 +45,25 @@ export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const [campaign, setCampaign] = useState<any>(null);
   const [perf, setPerf] = useState<CampaignPerformance | null>(null);
+  const [codigo, setCodigo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [{ data: camp, error: campErr }, p] = await Promise.all([
+      const [{ data: camp, error: campErr }, p, { data: cod }] = await Promise.all([
         supabase.from('hub_campaigns').select('*').eq('id', id).maybeSingle(),
         fetchPerformance(id).catch(() => null),
+        supabase.from('hub_campaign_codes')
+          .select('code, kind, value, redemptions, max_redemptions, valid_until')
+          .eq('campaign_id', id).maybeSingle(),
       ]);
       if (campErr) throw campErr;
       if (!camp) throw new Error('Campaña no encontrada.');
       setCampaign(camp);
       setPerf(p);
+      setCodigo(cod ?? null);
       setError('');
     } catch (err: any) {
       setError(err.message ?? 'No se pudo cargar la campaña.');
@@ -99,6 +104,7 @@ export default function CampaignDetail() {
     );
   }
 
+  const canjes = codigo?.redemptions ?? 0;
   const inProgress = ['queued', 'sending'].includes(campaign.status);
   const delivered = perf?.delivered ?? 0;
   const hasBookings = (perf?.bookings ?? 0) > 0;
@@ -132,6 +138,56 @@ export default function CampaignDetail() {
       {campaign.failure_reason && (
         <div className="bg-hubDanger/10 border border-hubDanger/25 text-hubDanger rounded-2xl px-4 py-3 text-xs font-bold">
           {campaign.failure_reason}
+        </div>
+      )}
+
+      {/* ── El código de la campaña ───────────────────────────────
+          Aquí y no escondido en un desplegable: es lo que hay que decirle
+          a quien llama por teléfono preguntando por la oferta del correo,
+          y lo que el mostrador necesita a mano. */}
+      {codigo && (
+        <div className="bg-hubSurface border border-hubBorder rounded-2xl p-5 space-y-3">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-hubText3">
+                Código de la campaña
+              </p>
+              <p className="text-2xl font-black text-hubText tracking-wider mt-1 font-mono">
+                {codigo.code}
+              </p>
+              <p className="text-[11px] text-hubText2 mt-1.5 leading-relaxed">
+                {codigo.kind === 'percent'
+                  ? `Descuenta un ${Number(codigo.value)}% al reservar. Va en el correo y también sirve por teléfono.`
+                  : 'No descuenta nada: sirve para saber quién vino de esta campaña.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(codigo.code)}
+              className="bg-hubSurface2 border border-hubBorder hover:border-hubBlue/40 text-hubText px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0"
+            >
+              <span className="material-symbols-outlined notranslate text-[15px]" translate="no">content_copy</span>
+              Copiar
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-1 pt-3 border-t border-hubBorder/60 text-[11px]">
+            <span className="text-hubText3 font-bold">
+              Canjeado{' '}
+              <span className="text-hubText font-black tabular-nums">
+                {canjes}{codigo.max_redemptions ? ` de ${codigo.max_redemptions}` : ''}
+              </span>
+            </span>
+            {codigo.valid_until && (
+              <span className="text-hubText3 font-bold">
+                Válido hasta{' '}
+                <span className="text-hubText font-black tabular-nums">
+                  {new Date(codigo.valid_until).toLocaleDateString('es-ES')}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
       )}
 
