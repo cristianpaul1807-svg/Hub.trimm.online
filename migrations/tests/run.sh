@@ -32,6 +32,8 @@ MIGRATION_FILES=(
   20260901_hub_analytics.sql
   20260902_hub_email_templates.sql
   20260902_hub_template_tests.sql
+  20260902_hub_pay_per_campaign.sql
+  20260902_hub_quote_credits.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -117,4 +119,11 @@ psql_run "-f $WORK/06_test_quota_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Migraciones, motor, saldo, accesos, KPIs, análisis y cupos verificados."
+echo "→ Ejecutando las comprobaciones del pago suelto de campaña"
+echo
+psql_run "-f $WORK/07_pay_per_campaign_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
+
+echo
+echo "✓ Todo verificado: motor, saldo, accesos, KPIs, análisis, cupos y pago suelto."

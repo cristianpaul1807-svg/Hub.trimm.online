@@ -2,18 +2,8 @@
 // TRIMM Hub — Utilidades compartidas del motor de campañas
 // ============================================================
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-export function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
+// Se reexportan para no romper a quien ya los importaba de aquí.
+export { corsHeaders, json } from './http.ts'
 
 export const APP_URL = Deno.env.get('APP_URL') ?? 'https://trimm.online'
 export const HUB_URL = Deno.env.get('HUB_URL') ?? 'https://hub.trimm.online'

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useHubAuth } from '../../contexts/HubAuthContext';
 import { supabase } from '../../lib/supabase';
 import ReachSelector from '../../components/marketing/ReachSelector';
+import DirectPayPanel from '../../components/marketing/DirectPayPanel';
 import CampaignStatusBadge from '../../components/marketing/CampaignStatusBadge';
 import {
   CreditSummary, EMPTY_SUMMARY, fetchCreditSummary, formatCredits,
@@ -45,6 +46,7 @@ export default function Campaigns() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [launched, setLaunched] = useState<{ recipients: number; leftover: number } | null>(null);
 
   // Formulario
   const [template, setTemplate] = useState<TemplateType>('discount');
@@ -107,6 +109,10 @@ export default function Campaigns() {
     return () => { cancelled = true; };
   }, [template, targetAll, selectedBizIds, linkedBusinesses, summary.total]);
 
+  // Las sucursales a las que va la campaña. Se calcula una sola vez: el
+  // envío con saldo y el pago suelto tienen que apuntar a las mismas.
+  const bizIds = targetAll ? linkedBusinesses.map((b) => b.business_id) : selectedBizIds;
+
   const resetCreator = () => {
     setShowCreator(false);
     setStep(1);
@@ -118,8 +124,6 @@ export default function Campaigns() {
     setError('');
 
     try {
-      const bizIds = targetAll ? linkedBusinesses.map((b) => b.business_id) : selectedBizIds;
-
       const { data, error: fnErr } = await supabase.functions.invoke('hub-campaign-enqueue', {
         body: {
           template_type: template,
@@ -173,6 +177,16 @@ export default function Campaigns() {
           </div>
         )}
       </div>
+
+      {launched !== null && (
+        <div className="bg-hubSuccess/10 border border-hubSuccess/25 text-hubSuccess rounded-2xl px-4 py-3 text-xs font-bold flex items-center gap-2">
+          <span className="material-symbols-outlined notranslate text-[18px]" translate="no">check_circle</span>
+          Campaña lanzada: {formatCredits(launched.recipients)} correos
+          saliendo ahora.
+          {launched.leftover > 0
+            && ` Te quedan ${formatCredits(launched.leftover)} envíos en el saldo.`}
+        </div>
+      )}
 
       {!loading && linkedBusinesses.length === 0 && (
         <div className="bg-hubSurface border border-hubBorder rounded-2xl px-5 py-4">
@@ -343,20 +357,53 @@ export default function Campaigns() {
                 </div>
               )}
 
+              {/* El saldo no llega a toda la audiencia: se ofrece el otro
+                  camino en vez de dejar la pantalla en un callejón sin
+                  salida. Comprar un pack sigue estando arriba, en el aviso
+                  del selector; aquí se paga solo esta campaña. */}
+              {!countLoading && audience > 0 && summary.total < audience && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-hubBorder" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-hubText3">
+                      o
+                    </span>
+                    <div className="h-px flex-1 bg-hubBorder" />
+                  </div>
+
+                  <DirectPayPanel
+                    templateType={template}
+                    targetBusinessIds={bizIds}
+                    discountValue={template === 'discount' ? discountValue : undefined}
+                    audience={audience}
+                    onLaunched={(recipients, leftover) => {
+                      setLaunched({ recipients, leftover });
+                      resetCreator();
+                      loadAll();
+                    }}
+                  />
+                </>
+              )}
+
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)}
                   className="flex-1 bg-hubSurface2 border border-hubBorder text-hubText2 hover:text-hubText py-3 rounded-xl text-xs font-bold transition-all">
                   Atrás
                 </button>
-                <button
-                  onClick={handleLaunch}
-                  disabled={!canLaunch}
-                  className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
-                >
-                  {submitting
-                    ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : `Enviar a ${formatCredits(reach)} clientes`}
-                </button>
+                {/* Sin nada de saldo el botón no puede hacer nada: se
+                    esconde para que la única acción visible sea la que sí
+                    funciona. */}
+                {summary.total > 0 && (
+                  <button
+                    onClick={handleLaunch}
+                    disabled={!canLaunch}
+                    className="flex-1 bg-hubBlue hover:bg-hubBlueHover text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                  >
+                    {submitting
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : `Enviar a ${formatCredits(reach)} clientes con mi saldo`}
+                  </button>
+                )}
               </div>
             </div>
           )}

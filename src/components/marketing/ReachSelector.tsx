@@ -40,8 +40,9 @@ export default function ReachSelector({
         <div className="bg-hubWarning/10 border border-hubWarning/25 rounded-2xl p-4 space-y-2">
           <p className="text-xs font-black text-hubWarning">Te has quedado sin envíos</p>
           <p className="text-[11px] text-hubText2 leading-relaxed">
-            Recarga saldo para poder lanzar esta campaña. Tienes{' '}
-            {formatCredits(audience)} clientes esperando.
+            Tienes {formatCredits(audience)} clientes esperando. Compra un
+            pack —sale más barato por envío— o paga solo esta campaña aquí
+            abajo.
           </p>
           <Link
             to="/dashboard/marketing/credits"
@@ -91,11 +92,12 @@ export default function ReachSelector({
             <div className="bg-hubWarning/10 border border-hubWarning/25 rounded-xl px-3.5 py-2.5">
               <p className="text-[11px] text-hubText2 leading-relaxed">
                 Tu saldo cubre {formatCredits(balance)} de los{' '}
-                {formatCredits(audience)} clientes elegibles.{' '}
+                {formatCredits(audience)} clientes elegibles. Para llegar a
+                todos,{' '}
                 <Link to="/dashboard/marketing/credits" className="text-hubBlue font-black hover:underline">
-                  Recargar
+                  compra un pack
                 </Link>{' '}
-                para llegar a todos.
+                o paga esta campaña aquí abajo.
               </p>
             </div>
           )}

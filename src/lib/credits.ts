@@ -147,3 +147,93 @@ export const LEDGER_ICONS: Record<string, string> = {
   expiry:     'schedule',
   adjustment: 'tune',
 };
+
+// ── Pago suelto de una campaña ──────────────────────────────────────
+// El otro camino además de los packs: dices cuánto te gastas y se calcula
+// cuántos correos son a la tarifa directa.
+
+export interface CampaignQuote {
+  audience: number;
+  rate_cents: number;
+  min_budget_cents: number;
+  max_budget_cents: number;
+  budget_cents: number;
+  /** Envíos que compra el presupuesto. Es por lo que se cobra. */
+  credits: number;
+  /** De esos, los que salen en esta campaña. */
+  emails: number;
+  /** Los comprados que no salen hoy y quedan en el saldo. */
+  leftover: number;
+  amount_cents: number;
+  capped_by_audience: boolean;
+  below_minimum: boolean;
+  /** Igual que `credits`. Se mantiene por la primera versión de la API. */
+  affordable: number;
+}
+
+/**
+ * Cuántos envíos da un presupuesto.
+ *
+ * La calcula la base de datos, no el navegador, y el servidor vuelve a
+ * pedirla antes de cobrar: si el número se calculara aquí, lo mostrado y lo
+ * cobrado podrían no coincidir.
+ */
+export async function quoteCampaign(
+  businessIds: string[],
+  templateType: string,
+  budgetCents: number,
+  daysInactive = 30,
+): Promise<CampaignQuote | null> {
+  const { data, error } = await supabase.rpc('hub_quote_campaign', {
+    p_business_ids: businessIds,
+    p_template_type: templateType,
+    p_days_inactive: daysInactive,
+    p_budget_cents: Math.round(budgetCents),
+  });
+  if (error) return null;
+  return data as CampaignQuote;
+}
+
+export interface CheckoutResult {
+  success?: boolean;
+  requires_action?: boolean;
+  client_secret?: string;
+  payment_intent_id?: string;
+  campaign_id?: string;
+  recipients?: number;
+  leftover?: number;
+  amount_cents?: number;
+  quote?: CampaignQuote;
+}
+
+/** Fase 1: presupuestar y abrir el cobro. */
+export async function startCampaignCheckout(params: {
+  templateId?: string | null;
+  templateType: string;
+  targetBusinessIds: string[];
+  discountValue?: number;
+  budgetCents: number;
+}): Promise<CheckoutResult> {
+  const { data, error } = await supabase.functions.invoke('hub-campaign-checkout', {
+    body: {
+      template_id: params.templateId ?? null,
+      template_type: params.templateType,
+      target_business_ids: params.targetBusinessIds,
+      discount_value: params.discountValue,
+      budget_cents: Math.round(params.budgetCents),
+    },
+  });
+  if (error && !data) throw new Error('No se pudo contactar con el servicio de pago');
+  if (data?.error) throw new Error(data.error);
+  return data as CheckoutResult;
+}
+
+/** Fase 2: tras confirmar la tarjeta en el navegador. */
+export async function finishCampaignCheckout(paymentIntentId: string): Promise<CheckoutResult> {
+  const { data, error } = await supabase.functions.invoke('hub-campaign-checkout', {
+    body: { payment_intent_id: paymentIntentId },
+  });
+  if (error && !data) throw new Error('No se pudo contactar con el servicio de pago');
+  if (data?.error) throw new Error(data.error);
+  return data as CheckoutResult;
+}
