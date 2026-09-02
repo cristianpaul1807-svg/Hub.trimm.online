@@ -201,3 +201,56 @@ export async function previewTemplate(
   if (data?.error) throw new Error(data.error);
   return data;
 }
+
+// ── Vista previa de una campaña del asistente ────────────────────────
+// El asistente no usa plantillas guardadas: la maqueta la decide el tipo
+// de campaña. Se pide al servidor por el mismo camino que la vista previa
+// de plantillas, para que lo que se ve sea lo que se manda.
+
+/** Cuántas pruebas quedan hoy para este tipo de campaña. No gasta ninguna. */
+export async function fetchCampaignQuota(campaignType: string): Promise<TestQuota | null> {
+  const { data, error } = await supabase.rpc('hub_test_quota_key', {
+    p_key: `campana:${campaignType}`,
+  });
+  if (error) return null;
+  return data as TestQuota;
+}
+
+export async function previewCampaign(
+  campaignType: string,
+  opts: { discountValue?: number; businessName?: string } = {},
+): Promise<{ subject: string; html: string }> {
+  const { data, error } = await supabase.functions.invoke('hub-template-preview', {
+    body: {
+      campaign_type: campaignType,
+      discount_value: opts.discountValue,
+      business_name: opts.businessName,
+    },
+  });
+  if (error && !data) throw new Error('No se pudo generar la vista previa');
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+/**
+ * Prueba de una campaña al buzón de la sesión.
+ *
+ * El destinatario no se puede elegir: lo pone el servidor a partir de la
+ * sesión. Se cuenta contra el tipo de campaña, 2 al día.
+ */
+export async function sendCampaignTest(
+  campaignType: string,
+  opts: { discountValue?: number; businessName?: string } = {},
+): Promise<{ sent_to: string; quota: TestQuota }> {
+  const { data, error } = await supabase.functions.invoke('hub-template-preview', {
+    body: {
+      campaign_type: campaignType,
+      discount_value: opts.discountValue,
+      business_name: opts.businessName,
+      send_test: true,
+    },
+  });
+  if (error && !data) throw new Error('No se pudo contactar con el servicio');
+  if (data?.error) throw new Error(data.error);
+  return data;
+}

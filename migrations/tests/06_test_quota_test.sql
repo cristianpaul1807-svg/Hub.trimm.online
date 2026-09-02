@@ -95,6 +95,37 @@ BEGIN
     RAISE NOTICE '11. Tras devolver la prueba fallida, la fila ya no está';
   END;
 
+  -- ── 12. El cupo del asistente de campaña ──────────────────────────
+  -- Misma mecánica, otra clave: aquí no hay plantilla guardada, hay un
+  -- tipo de campaña. Y no debe compartir cupo con las plantillas.
+  DECLARE
+    v_c jsonb;
+  BEGIN
+    v_c := hub_consume_test_key(v_b, 'campana:discount', 'b@grupo.com');
+    RAISE NOTICE '12. Prueba de campaña: permitida=%, quedan %',
+      v_c->>'allowed', v_c->>'remaining';
+    ASSERT (v_c->>'allowed')::boolean, 'La primera prueba de campana deberia pasar';
+
+    v_c := hub_consume_test_key(v_b, 'campana:discount', 'b@grupo.com');
+    v_c := hub_consume_test_key(v_b, 'campana:discount', 'b@grupo.com');
+    RAISE NOTICE '13. La tercera del mismo tipo: permitida=%, motivo=%',
+      v_c->>'allowed', v_c->>'reason';
+    ASSERT NOT (v_c->>'allowed')::boolean, 'La tercera deberia rechazarse';
+    ASSERT v_c->>'reason' = 'per_template', 'Por cupo de la clave, no diario';
+
+    -- Otro tipo de campaña tiene su propio cupo.
+    v_c := hub_consume_test_key(v_b, 'campana:loyalty', 'b@grupo.com');
+    RAISE NOTICE '14. Otro tipo de campaña: permitida=%', v_c->>'allowed';
+    ASSERT (v_c->>'allowed')::boolean, 'Cada tipo lleva su propio cupo';
+
+    -- Y no se mezcla con el de una plantilla guardada.
+    PERFORM set_config('test.uid', v_b::text, false);
+    v_c := hub_test_quota_key('campana:discount');
+    RAISE NOTICE '15. La pantalla dice: gastadas % de 2 para campana:discount',
+      v_c->>'per_template_used';
+    ASSERT (v_c->>'per_template_used')::int = 2, 'Deberia contar 2 en esa clave';
+  END;
+
   RAISE NOTICE '';
   RAISE NOTICE 'Cupo de pruebas verificado.';
 END

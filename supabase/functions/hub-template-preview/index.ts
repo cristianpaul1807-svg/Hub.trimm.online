@@ -8,13 +8,24 @@
 // El correo de prueba va SIEMPRE a la dirección de la sesión, nunca a una
 // que llegue en el cuerpo de la petición: si no, esto sería un servicio
 // gratuito para mandar correo a desconocidos desde nuestro dominio.
+//
+// Sirve a dos pantallas:
+//
+//   · Plantillas — se le pasa template_id (una guardada) o la plantilla
+//     entera a medio escribir, y renderiza con renderEmail.
+//
+//   · El asistente de campaña — se le pasa campaign_type y renderiza con
+//     renderTemplate, que es literalmente la función que usa el worker
+//     cuando la campaña no lleva plantilla propia. Es el caso que más
+//     importa: ahí alguien está a punto de pagar por un correo que no ha
+//     visto nunca.
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   corsHeaders, json, RESEND_KEY, MARKETING_FROM, marketingSenderProblem,
-  APP_URL, HUB_URL,
+  APP_URL, HUB_URL, renderTemplate,
 } from '../_shared/campaign.ts'
 import { renderEmail, type Template, type Brand } from '../_shared/templates.ts'
 
@@ -37,7 +48,10 @@ serve(async (req) => {
       await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (authError || !user) return json({ error: 'Unauthorized' }, 401)
 
-    const { template_id, template, send_test, business_name, discount_value } = await req.json()
+    const {
+      template_id, template, campaign_type,
+      send_test, business_name, discount_value,
+    } = await req.json()
 
     // ── De dónde sale la plantilla ─────────────────────────────────
     // Puede venir por id (una guardada) o entera en el cuerpo (lo que el
@@ -61,9 +75,16 @@ serve(async (req) => {
       t = template as Template
     }
 
-    if (!t?.body || !t?.subject) {
+    // En modo campaña no hay plantilla: la maqueta la pone renderTemplate.
+    if (!campaign_type && (!t?.body || !t?.subject)) {
       return json({ error: 'Falta el asunto o el cuerpo' }, 400)
     }
+
+    // Contra qué se cuenta la prueba. Una clave de texto y no un id, porque
+    // una campaña del asistente todavía no existe en la base de datos.
+    const clave = campaign_type
+      ? `campana:${campaign_type}`
+      : template_id ? `plantilla:${template_id}` : null
 
     const { data: brand } = await supabase
       .from('hub_brand')
@@ -85,15 +106,23 @@ serve(async (req) => {
       negocio = (biz as any)?.businesses?.name?.trim() || 'Tu negocio'
     }
 
-    const rendered = renderEmail(t, {
+    // Enlaces de ejemplo: la vista previa no debe atribuir reservas ni dar
+    // de baja a nadie si alguien pincha.
+    const datos = {
       clientName: 'Ana',
       businessName: negocio,
       discountValue: Number.isFinite(discount_value) ? discount_value : 10,
-      // Enlaces de ejemplo: la vista previa no debe atribuir reservas ni
-      // dar de baja a nadie si alguien pincha.
       bookingUrl: `${APP_URL}/b/ejemplo`,
       unsubscribeUrl: `${HUB_URL}/baja?t=ejemplo`,
-    }, (brand ?? null) as Brand | null)
+    }
+
+    // La misma bifurcación que hace el worker al enviar de verdad: con
+    // plantilla propia, renderEmail; sin ella, la maqueta del tipo de
+    // campaña. Si aquí se eligiera distinto, la vista previa enseñaría un
+    // correo que no es el que llega.
+    const rendered = campaign_type && !t
+      ? renderTemplate(campaign_type, datos)
+      : renderEmail(t!, datos, (brand ?? null) as Brand | null)
 
     if (!send_test) {
       return json({ success: true, subject: rendered.subject, html: rendered.html })
@@ -104,20 +133,20 @@ serve(async (req) => {
     if (problema) return json({ error: problema }, 500)
     if (!RESEND_KEY) return json({ error: 'Falta la clave de Resend' }, 500)
 
-    // La prueba se cuenta contra una plantilla concreta, así que tiene que
-    // estar guardada. Si se aceptara el borrador suelto no habría contra qué
-    // contar, y bastaría con cambiar una coma para tener pruebas infinitas.
-    if (!template_id) {
+    // Hace falta algo contra lo que contar. Un borrador suelto no vale: con
+    // cambiar una coma se tendrían pruebas infinitas.
+    if (!clave) {
       return json({
         error: 'Guarda la plantilla antes de enviarte una prueba',
         needs_save: true,
       }, 400)
     }
 
-    const { data: cupo, error: cupoErr } = await supabase.rpc('hub_consume_test', {
+    const { data: cupo, error: cupoErr } = await supabase.rpc('hub_consume_test_key', {
       p_hub_owner_id: user.id,
-      p_template_id: template_id,
+      p_key: clave,
       p_sent_to: user.email,
+      p_template_id: template_id ?? null,
     })
 
     if (cupoErr) {
@@ -129,7 +158,9 @@ serve(async (req) => {
       return json({
         error: cupo?.reason === 'daily'
           ? 'Has llegado al máximo de 10 pruebas de hoy. Mañana se reinicia.'
-          : 'Ya has enviado las 2 pruebas de hoy para esta plantilla. Mañana se reinicia.',
+          : campaign_type
+            ? 'Ya has enviado las 2 pruebas de hoy para este tipo de campaña. Mañana se reinicia.'
+            : 'Ya has enviado las 2 pruebas de hoy para esta plantilla. Mañana se reinicia.',
         quota: cupo,
       }, 429)
     }

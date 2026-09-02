@@ -32,6 +32,7 @@ MIGRATION_FILES=(
   20260901_hub_analytics.sql
   20260902_hub_email_templates.sql
   20260902_hub_template_tests.sql
+  20260902_hub_campaign_tests.sql
   20260902_hub_pay_per_campaign.sql
   20260902_hub_quote_credits.sql
 )

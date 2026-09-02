@@ -4,6 +4,7 @@ import { useHubAuth } from '../../contexts/HubAuthContext';
 import { supabase } from '../../lib/supabase';
 import ReachSelector from '../../components/marketing/ReachSelector';
 import DirectPayPanel from '../../components/marketing/DirectPayPanel';
+import CampaignPreview from '../../components/marketing/CampaignPreview';
 import CampaignStatusBadge from '../../components/marketing/CampaignStatusBadge';
 import {
   CreditSummary, EMPTY_SUMMARY, fetchCreditSummary, formatCredits,
@@ -112,6 +113,11 @@ export default function Campaigns() {
   // Las sucursales a las que va la campaña. Se calcula una sola vez: el
   // envío con saldo y el pago suelto tienen que apuntar a las mismas.
   const bizIds = targetAll ? linkedBusinesses.map((b) => b.business_id) : selectedBizIds;
+
+  // El nombre que aparecerá en el correo. Se coge el de la primera sucursal
+  // objetivo: el correo sale a nombre del negocio, no del grupo.
+  const nombreNegocio = linkedBusinesses
+    .find((b: any) => b.business_id === bizIds[0])?.businesses?.name;
 
   const resetCreator = () => {
     setShowCreator(false);
@@ -324,6 +330,15 @@ export default function Campaigns() {
                   </p>
                 </div>
               )}
+
+              {/* El correo real, antes de pagar por él. Aquí es donde se
+                  detecta el descuento mal puesto: en el paso 3 ya se está
+                  decidiendo cuánto gastar, no si el correo está bien. */}
+              <CampaignPreview
+                campaignType={template}
+                discountValue={template === 'discount' ? discountValue : undefined}
+                businessName={nombreNegocio}
+              />
 
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setStep(1)}
