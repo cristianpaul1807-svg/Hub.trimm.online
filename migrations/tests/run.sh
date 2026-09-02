@@ -31,6 +31,7 @@ MIGRATION_FILES=(
   20260901_hub_kpis.sql
   20260901_hub_analytics.sql
   20260902_hub_email_templates.sql
+  20260902_hub_template_tests.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -109,4 +110,11 @@ psql_run "-f $WORK/05_analytics_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Migraciones, motor, saldo, accesos, KPIs y análisis verificados."
+echo "→ Ejecutando las comprobaciones del cupo de pruebas"
+echo
+psql_run "-f $WORK/06_test_quota_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
+
+echo
+echo "✓ Migraciones, motor, saldo, accesos, KPIs, análisis y cupos verificados."

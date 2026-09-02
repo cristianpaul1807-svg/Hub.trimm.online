@@ -3,8 +3,8 @@ import { useHubAuth } from '../../contexts/HubAuthContext';
 import { useHubLang } from '../../contexts/HubLanguageContext';
 import {
   fetchTemplates, fetchBrand, saveBrand, duplicateTemplate, saveTemplate,
-  deleteTemplate, previewTemplate, LAYOUTS, VARIABLES,
-  type EmailTemplate, type Brand, type Layout,
+  deleteTemplate, previewTemplate, sendTest, fetchTestQuota, LAYOUTS, VARIABLES,
+  type EmailTemplate, type Brand, type Layout, type TestQuota,
 } from '../../lib/templates';
 
 /**
@@ -33,6 +33,7 @@ export default function Templates() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [brandOpen, setBrandOpen] = useState(false);
+  const [quota, setQuota] = useState<TestQuota | null>(null);
 
   const cargar = useCallback(async () => {
     if (!user) return;
@@ -52,6 +53,12 @@ export default function Templates() {
   useEffect(() => { cargar(); }, [cargar]);
 
   useEffect(() => { setDraft(sel ? { ...sel } : null); }, [sel]);
+
+  // Cuántas pruebas quedan hoy para la plantilla elegida.
+  useEffect(() => {
+    if (!sel) { setQuota(null); return; }
+    fetchTestQuota(sel.id).then(setQuota);
+  }, [sel]);
 
   // ── Vista previa, con freno ───────────────────────────────────────
   // Se espera a que deje de escribir. Sin esto sería una llamada por tecla.
@@ -116,9 +123,24 @@ export default function Templates() {
     if (!draft) return;
     setBusy(true); setError('');
     try {
-      const r = await previewTemplate(draft, { sendTest: true });
+      // La prueba se cuenta contra la plantilla guardada, así que lo que se
+      // envía tiene que estar guardado. Si hay cambios sin guardar se
+      // guardan primero, en lugar de mandar algo distinto de lo que se ve.
+      const hayCambios = editable && sel && JSON.stringify(draft) !== JSON.stringify(sel);
+      if (hayCambios) {
+        await saveTemplate(draft);
+        await cargar();
+      }
+
+      const r = await sendTest(draft.id);
+      setQuota(r.quota);
       aviso(`${t.templates.testSent} ${r.sent_to ?? ''}`);
-    } catch (e: any) { setError(e.message); } finally { setBusy(false); }
+    } catch (e: any) {
+      setError(e.message);
+      // Si el rechazo fue por cupo, se refresca para que el contador de la
+      // pantalla no siga diciendo que quedan pruebas.
+      if (draft) fetchTestQuota(draft.id).then(setQuota);
+    } finally { setBusy(false); }
   };
 
   const guardarMarca = async (b: Partial<Brand>) => {
@@ -330,11 +352,23 @@ export default function Templates() {
               </p>
               <p className="text-sm font-black text-slate-900 truncate">{subject || '—'}</p>
             </div>
-            <button onClick={enviarPrueba} disabled={busy || !draft}
-              className="shrink-0 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5">
-              <span className="material-symbols-outlined notranslate text-[15px]" translate="no">outgoing_mail</span>
-              {t.templates.sendTest}
-            </button>
+            <div className="shrink-0 text-right">
+              <button
+                onClick={enviarPrueba}
+                disabled={busy || !draft || quota?.remaining === 0}
+                className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined notranslate text-[15px]" translate="no">outgoing_mail</span>
+                {t.templates.sendTest}
+              </button>
+              {quota && (
+                <p className="text-[10px] font-bold text-slate-400 mt-1">
+                  {quota.remaining > 0
+                    ? t.templates.testsLeft.replace('{n}', String(quota.remaining))
+                    : t.templates.testsSpent}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* En un iframe con sandbox: el HTML del correo trae sus propios

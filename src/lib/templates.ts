@@ -134,6 +134,41 @@ export async function deleteTemplate(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export interface TestQuota {
+  per_template_limit: number;
+  per_template_used: number;
+  remaining: number;
+  daily_limit: number;
+  daily_used: number;
+}
+
+/** Cuántas pruebas quedan hoy para esta plantilla. No gasta ninguna. */
+export async function fetchTestQuota(templateId: string): Promise<TestQuota | null> {
+  const { data, error } = await supabase.rpc('hub_test_quota', { p_template_id: templateId });
+  if (error) return null;
+  return data as TestQuota;
+}
+
+/**
+ * Correo de prueba al buzón de la sesión.
+ *
+ * Va siempre a la dirección con la que se entra al Hub; no hay forma de
+ * indicar otra. Y se cuenta contra la plantilla guardada, así que hay que
+ * pasar su identificador: sin él el servidor lo rechaza, porque un borrador
+ * suelto no tendría contra qué contar.
+ */
+export async function sendTest(
+  templateId: string,
+  discountValue = 10,
+): Promise<{ sent_to: string; quota: TestQuota }> {
+  const { data, error } = await supabase.functions.invoke('hub-template-preview', {
+    body: { template_id: templateId, send_test: true, discount_value: discountValue },
+  });
+  if (error && !data) throw new Error('No se pudo contactar con el servicio');
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 /**
  * Vista previa desde el servidor.
  *

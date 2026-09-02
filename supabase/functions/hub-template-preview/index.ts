@@ -23,10 +23,10 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-// Una prueba por minuto y cuenta. Sin esto, el botón de "enviar prueba"
-// es un grifo abierto contra la reputación del dominio de marketing.
-const ESPERA_ENTRE_PRUEBAS_MS = 60_000
-const ultimaPrueba = new Map<string, number>()
+// El cupo de pruebas vive en la base de datos (hub_consume_test), no aquí.
+// Un Map en memoria no limita nada: las Edge Functions arrancan en frío y
+// cada instancia tiene el suyo, así que basta con caer en otra para
+// saltárselo. 2 por plantilla y día, 10 al día por cuenta.
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -104,13 +104,35 @@ serve(async (req) => {
     if (problema) return json({ error: problema }, 500)
     if (!RESEND_KEY) return json({ error: 'Falta la clave de Resend' }, 500)
 
-    const ahora = Date.now()
-    const anterior = ultimaPrueba.get(user.id) ?? 0
-    if (ahora - anterior < ESPERA_ENTRE_PRUEBAS_MS) {
-      const quedan = Math.ceil((ESPERA_ENTRE_PRUEBAS_MS - (ahora - anterior)) / 1000)
-      return json({ error: `Espera ${quedan} segundos antes de otra prueba` }, 429)
+    // La prueba se cuenta contra una plantilla concreta, así que tiene que
+    // estar guardada. Si se aceptara el borrador suelto no habría contra qué
+    // contar, y bastaría con cambiar una coma para tener pruebas infinitas.
+    if (!template_id) {
+      return json({
+        error: 'Guarda la plantilla antes de enviarte una prueba',
+        needs_save: true,
+      }, 400)
     }
-    ultimaPrueba.set(user.id, ahora)
+
+    const { data: cupo, error: cupoErr } = await supabase.rpc('hub_consume_test', {
+      p_hub_owner_id: user.id,
+      p_template_id: template_id,
+      p_sent_to: user.email,
+    })
+
+    if (cupoErr) {
+      console.error('hub_consume_test falló', cupoErr)
+      return json({ error: 'No se pudo comprobar el cupo de pruebas' }, 500)
+    }
+
+    if (!cupo?.allowed) {
+      return json({
+        error: cupo?.reason === 'daily'
+          ? 'Has llegado al máximo de 10 pruebas de hoy. Mañana se reinicia.'
+          : 'Ya has enviado las 2 pruebas de hoy para esta plantilla. Mañana se reinicia.',
+        quota: cupo,
+      }, 429)
+    }
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -126,10 +148,22 @@ serve(async (req) => {
     if (!res.ok) {
       const detalle = await res.text()
       console.error('Resend rechazó la prueba:', res.status, detalle)
+      // Se devuelve el cupo: no ha llegado ningún correo, así que cobrarle
+      // la prueba al usuario por un fallo nuestro no tiene sentido. Se borra
+      // por identificador; PostgREST no admite LIMIT en un DELETE.
+      if (cupo?.test_id) {
+        await supabase.from('hub_template_tests').delete().eq('id', cupo.test_id)
+      }
       return json({ error: 'No se pudo enviar la prueba' }, 502)
     }
 
-    return json({ success: true, sent_to: user.email, subject: rendered.subject, html: rendered.html })
+    return json({
+      success: true,
+      sent_to: user.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      quota: cupo,
+    })
 
   } catch (err) {
     console.error(err)
