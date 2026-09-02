@@ -58,6 +58,18 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
     comparator: t.sidebar.comparator || 'Comparator',
   };
 
+  // Tipado a propósito. El menú principal de arriba usa labelKey y lo
+  // resuelve contra `labels`; este de aquí lleva la etiqueta ya resuelta.
+  // Confundir los dos —poner labelKey aquí— compila igual y deja una fila
+  // en blanco: pulsable, pero invisible. Con el tipo, eso no pasa de tsc.
+  const subMarketing: { to: string; label: string }[] = [
+    { to: '/dashboard/marketing',           label: t.sidebar.marketing },
+    { to: '/dashboard/marketing/campaigns', label: t.sidebar.campaigns },
+    { to: '/dashboard/marketing/templates', label: labels.templates },
+    { to: '/dashboard/marketing/credits',   label: t.sidebar.credits ?? 'Saldo' },
+    { to: '/dashboard/marketing/billing',   label: t.sidebar.billing },
+  ];
+
   return (
     <>
       {/* Sidebar */}
@@ -137,13 +149,7 @@ export default function SideBar({ isOpen, onClose }: SideBarProps) {
               </button>
               {marketingOpen && (
                 <div className="pl-4 space-y-1 mt-1">
-                  {[
-                    { to: '/dashboard/marketing',           label: t.sidebar.marketing },
-                    { to: '/dashboard/marketing/campaigns', label: t.sidebar.campaigns },
-      { to: '/dashboard/marketing/templates', labelKey: 'templates' },
-                    { to: '/dashboard/marketing/credits',   label: t.sidebar.credits ?? 'Saldo' },
-                    { to: '/dashboard/marketing/billing',   label: t.sidebar.billing },
-                  ].map((sub) => (
+                  {subMarketing.map((sub) => (
                     <Link
                       key={sub.to}
                       to={sub.to}
