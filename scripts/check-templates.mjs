@@ -179,5 +179,39 @@ const b3 = T.renderEmail(
 ok('un cta_url no válido cae a la reserva',  b3.html.includes('trimm.online/b/salon'))
 ok('y no ejecuta nada',                      !b3.html.includes('javascript:'))
 
+// ── Sin enlace: instrucción en vez de botón ─────────────────────────
+// Un botón solo apunta a un sitio. Cuando no se sabe a qué sucursal
+// pertenece quien lee, mandarle a una al azar es peor que no mandarle.
+const sinEnlace = { ...ctx, bookingUrl: '', promoCode: 'DTO20-MU5BD' };
+
+const i1 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar' }, sinEnlace)
+// El pie siempre lleva el enlace de baja, así que buscar '<a href' no
+// dice nada. Lo que no debe haber es el botón, que se reconoce por su
+// relleno.
+ok('sin enlace no se pinta ningún botón', !i1.html.includes('padding:15px 34px'))
+ok('sale la instrucción con el negocio',  i1.html.includes('Reserva en Salón Centro'))
+ok('y recuerda añadir el código',         i1.html.includes('añade tu código de promoción antes de pagar'))
+
+// Sin código la frase cambia: no se puede pedir que añada algo que no tiene.
+const i2 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar' },
+  { ...ctx, bookingUrl: '' })
+ok('sin código no pide añadir código',    !i2.html.includes('añade tu código'))
+ok('pero sigue diciendo dónde reservar',  i2.html.includes('Reserva en Salón Centro'))
+
+// El nombre del negocio entra en el HTML, así que se escapa como todo.
+const i3 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar' },
+  { ...ctx, bookingUrl: '', businessName: '<img src=x onerror=alert(1)>' })
+ok('el negocio se escapa en la instrucción', !i3.html.includes('<img src=x'))
+
+// Y con cta_url propio el botón vuelve aunque no haya enlace de reserva.
+const i4 = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y', cta_label: 'Reservar',
+    cta_url: 'https://prenotazioni.ejemplo.com' }, sinEnlace)
+ok('un cta_url propio manda sobre la instrucción',
+   i4.html.includes('prenotazioni.ejemplo.com') && !i4.html.includes('Reserva en Salón Centro'))
+
 console.log(`\n${fallos === 0 ? 'Todas las comprobaciones del renderizador pasan.' : fallos + ' FALLOS'}`)
 process.exit(fallos ? 1 : 0)

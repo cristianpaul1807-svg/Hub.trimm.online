@@ -131,16 +131,25 @@ serve(async (req) => {
       : 'TRIMM'
     const codigoMuestra = `${prefijo}-EJEMP`
 
-    // El botón lleva a la reserva de verdad, pero SIN el ?tc= de la
-    // campaña. Es la diferencia que importa: la página abre y se ve como la
-    // verá el cliente, y a la vez la prueba no atribuye ninguna reserva a
-    // una campaña que todavía no existe.
+    // ── A dónde lleva el botón en la prueba ────────────────────────
     //
-    // Si el grupo no tuviera ninguna sucursal con identificador, se cae a
-    // la portada en lugar de a una página inexistente.
-    const enlaceReserva = elegida?.slug
+    // Con una sola sucursal no hay duda: el botón va a su página de
+    // reserva. Con varias sí la hay, y ahí un botón miente. En el envío de
+    // verdad cada correo sabe de qué sucursal es su destinatario; en una
+    // prueba no hay destinatario, así que elegir una sería enseñar un botón
+    // que no es el que va a salir.
+    //
+    // Cuando hay duda no se pone botón: se deja la instrucción —«Reserva en
+    // X y añade tu código antes de pagar»—, que es lo que el renderizador
+    // hace solo si no le damos enlace.
+    //
+    // Salvo que la pantalla haya dicho a qué sucursal apunta la campaña
+    // (business_name): entonces la duda no existe y vuelve el botón.
+    const unaSola = sucursales.length === 1 || (pedido && elegida?.name?.trim() === pedido)
+
+    const enlaceReserva = unaSola && elegida?.slug
       ? `${APP_URL}/b/${elegida.slug}`
-      : APP_URL
+      : ''
 
     // El de baja sí va con un token falso, a propósito: dar de baja de
     // verdad desde una prueba sería mucho peor que ver un aviso de enlace

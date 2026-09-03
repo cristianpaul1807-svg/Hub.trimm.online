@@ -146,15 +146,46 @@ function paragraphs(body: string, ctx: RenderContext): string {
     .join('')
 }
 
-function button(label: string, url: string, color: string): string {
+/**
+ * El botón, o la instrucción cuando no hay a dónde llevar.
+ *
+ * Un botón solo puede apuntar a un sitio. Cuando no sabemos con certeza a
+ * qué sucursal pertenece quien lee —la vista previa de un grupo con varias,
+ * o una sucursal sin página de reserva— mandarle a una elegida al azar es
+ * peor que no mandarle: reserva en el salón equivocado, o se encuentra una
+ * página que no es la suya y abandona.
+ *
+ * En ese caso se le dice qué hacer con palabras, que es lo que un cartel
+ * en el mostrador lleva haciendo toda la vida. Y se le recuerda el código,
+ * porque sin botón el código es lo único que conecta su reserva con esta
+ * campaña.
+ */
+function ctaBlock(label: string, url: string, color: string, ctx: RenderContext): string {
   const href = safeUrl(url)
-  if (!href) return ''
+  if (!href) return instruccion(ctx, color)
   // safeUrl ya ha filtrado esquemas raros; aquí solo se maqueta.
   // Tabla en lugar de un div: es lo que respeta Outlook.
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px auto 8px;">
     <tr><td align="center" bgcolor="${color}" style="border-radius:100px;">
       <a href="${href}" style="display:inline-block;padding:15px 34px;font-size:14px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:100px;">${escapeHtml(label)}</a>
+    </td></tr>
+  </table>`
+}
+
+/** Qué hacer, dicho con palabras, cuando no hay un enlace de fiar. */
+function instruccion(ctx: RenderContext, color: string): string {
+  const negocio = escapeHtml(ctx.businessName)
+  const conCodigo = !!ctx.promoCode
+  return `
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:26px 0 8px;">
+    <tr><td style="background:#f8fafc;border-left:4px solid ${color};border-radius:0 12px 12px 0;padding:18px 22px;">
+      <p style="margin:0;font-size:15px;color:#0f172a;font-weight:700;line-height:1.6;">Reserva en ${negocio}</p>
+      <p style="margin:6px 0 0;font-size:14px;color:#475569;line-height:1.6;">${
+        conCodigo
+          ? 'y añade tu código de promoción antes de pagar.'
+          : 'cuando te venga bien.'
+      }</p>
     </td></tr>
   </table>`
 }
@@ -260,7 +291,7 @@ ${imagen ? `<tr><td style="padding:0;"><img src="${imagen}" alt="" width="600" s
 <tr><td style="padding:32px;">
   ${paragraphs(t.body, ctx)}
   ${autoCodeBox(t, ctx, color)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
+  ${t.cta_label ? ctaBlock(fillSubject(t.cta_label, ctx), destino(t, ctx), color, ctx) : ''}
 </td></tr>`
 }
 
@@ -276,7 +307,7 @@ function offerLayout(t: Template, ctx: RenderContext, brand: Brand | null | unde
 <tr><td style="padding:32px;">
   ${paragraphs(t.body, ctx)}
   ${autoCodeBox(t, ctx, color)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
+  ${t.cta_label ? ctaBlock(fillSubject(t.cta_label, ctx), destino(t, ctx), color, ctx) : ''}
 </td></tr>`
 }
 
@@ -295,7 +326,7 @@ function cardLayout(t: Template, ctx: RenderContext, brand: Brand | null | undef
     </td></tr>
   </table>
   ${autoCodeBox(t, ctx, color)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
+  ${t.cta_label ? ctaBlock(fillSubject(t.cta_label, ctx), destino(t, ctx), color, ctx) : ''}
 </td></tr>`
 }
 
@@ -307,7 +338,7 @@ function plainLayout(t: Template, ctx: RenderContext, brand: Brand | null | unde
   ${titular ? `<h1 style="color:#0f172a;margin:0 0 16px;font-size:20px;font-weight:800;letter-spacing:-0.02em;">${fillVariables(escapeHtml(titular), ctx)}</h1>` : ''}
   ${paragraphs(t.body, ctx)}
   ${autoCodeBox(t, ctx, color)}
-  ${t.cta_label ? button(fillSubject(t.cta_label, ctx), destino(t, ctx), color) : ''}
+  ${t.cta_label ? ctaBlock(fillSubject(t.cta_label, ctx), destino(t, ctx), color, ctx) : ''}
 </td></tr>`
 }
 

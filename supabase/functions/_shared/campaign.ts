@@ -90,9 +90,14 @@ export function replyToFor(biz: BusinessInfo | undefined): string | undefined {
 // ── Enlaces ──────────────────────────────────────────────────────────
 // El enlace de reserva lleva el token del destinatario: es lo que permite
 // atribuir la reserva a la campaña que la provocó.
+//
+// Sin identificador de sucursal se devuelve cadena vacía a propósito: el
+// renderizador lo interpreta como «no hay a dónde llevar» y pone la
+// instrucción en lugar de un botón roto. Antes componía /b/?tc=… y el
+// cliente se encontraba un «negocio no encontrado».
 export function bookingUrl(biz: BusinessInfo | undefined, token: string) {
-  const base = `${APP_URL}/b/${biz?.slug ?? ''}`
-  return `${base}?tc=${token}`
+  if (!biz?.slug) return ''
+  return `${APP_URL}/b/${biz.slug}?tc=${token}`
 }
 
 // Enlace visible en el pie del correo: dominio propio, que es lo que la
@@ -141,6 +146,34 @@ function codeBox(code: string | null | undefined, color: string) {
     </div>`
 }
 
+/**
+ * El botón, o la instrucción cuando no hay a dónde llevar.
+ *
+ * Un botón solo apunta a un sitio. Cuando no sabemos con certeza a qué
+ * sucursal pertenece quien lee, mandarle a una elegida al azar es peor que
+ * no mandarle: acaba en el salón equivocado. Entonces se le dice qué hacer
+ * con palabras, y se le recuerda el código, que sin botón es lo único que
+ * conecta su reserva con esta campaña.
+ */
+function cta(a: TemplateArgs, etiqueta: string, color: string) {
+  const url = String(a.bookingUrl ?? '').trim()
+  if (url) {
+    return `
+        <div style="text-align:center;margin:32px 0 8px;">
+          <a href="${url}" style="background:${color};color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">${etiqueta}</a>
+        </div>`
+  }
+  return `
+        <div style="background:#f8fafc;border-left:4px solid ${color};border-radius:0 12px 12px 0;padding:18px 22px;margin:26px 0 8px;">
+          <p style="margin:0;font-size:15px;color:#0f172a;font-weight:700;line-height:1.6;">Reserva en ${a.businessName}</p>
+          <p style="margin:6px 0 0;font-size:14px;color:#475569;line-height:1.6;">${
+            a.promoCode
+              ? 'y añade tu código de promoción antes de pagar.'
+              : 'cuando te venga bien.'
+          }</p>
+        </div>`
+}
+
 function shell(businessName: string, unsubUrl: string, inner: string) {
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -178,9 +211,7 @@ export function buildReengagement(a: TemplateArgs) {
           Tu sitio sigue esperándote — reservar te lleva menos de un minuto.
         </p>
         ${codeBox(a.promoCode, '#1d4ed8')}
-        <div style="text-align:center;margin:32px 0 8px;">
-          <a href="${a.bookingUrl}" style="background:#1d4ed8;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Reservar mi cita</a>
-        </div>
+        ${cta(a, 'Reservar mi cita', '#1d4ed8')}
       </div>`),
   }
 }
@@ -202,9 +233,7 @@ export function buildDiscount(a: TemplateArgs) {
           Se aplica automáticamente al reservar desde este correo.
         </p>
         ${codeBox(a.promoCode, '#1d4ed8')}
-        <div style="text-align:center;margin:32px 0 8px;">
-          <a href="${a.bookingUrl}" style="background:#1d4ed8;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Reservar con ${pct}% dto.</a>
-        </div>
+        ${cta(a, `Reservar con ${pct}% dto.`, '#1d4ed8')}
       </div>`),
   }
 }
@@ -224,9 +253,7 @@ export function buildLoyalty(a: TemplateArgs) {
           recompensa. Activar tu tarjeta es gratis y solo se hace una vez.
         </p>
         ${codeBox(a.promoCode, '#059669')}
-        <div style="text-align:center;margin:32px 0 8px;">
-          <a href="${a.bookingUrl}" style="background:#059669;color:#fff;padding:15px 34px;border-radius:100px;text-decoration:none;font-weight:800;font-size:14px;display:inline-block;">Activar mi tarjeta</a>
-        </div>
+        ${cta(a, 'Activar mi tarjeta', '#059669')}
       </div>`),
   }
 }
