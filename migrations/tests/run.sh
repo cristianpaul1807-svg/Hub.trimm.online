@@ -38,6 +38,7 @@ MIGRATION_FILES=(
   20260903_hub_campaign_codes.sql
   20260903_hub_templates_i18n.sql
   20260903_hub_render_cta_url.sql
+  20260904_hub_audiencia_por_sucursal.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -144,4 +145,11 @@ psql_run "-f $WORK/09_templates_i18n_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Todo verificado: motor, saldo, accesos, KPIs, análisis, cupos, pago suelto, códigos e idiomas."
+echo "→ Ejecutando las comprobaciones de la audiencia por sucursal"
+echo
+psql_run "-f $WORK/10_audiencia_por_sucursal_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
+
+echo
+echo "✓ Todo verificado: motor, saldo, accesos, KPIs, análisis, cupos, pago suelto, códigos, idiomas y audiencia."

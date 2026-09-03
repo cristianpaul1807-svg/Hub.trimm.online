@@ -45,16 +45,22 @@ BEGIN
 
   PERFORM set_config('test.uid', v_owner::text, false);
 
-  -- ── 1. Audiencia: dedupe, minúsculas, consentimiento, formato ─────
+  -- ── 1. Audiencia: minúsculas, consentimiento, formato ─────────────
+  -- Antes esperaba 5, porque Ana —clienta de las dos sucursales— contaba
+  -- una sola vez. Ahora cuenta dos, una por salón: no sabemos cuál es el
+  -- suyo de verdad, y elegir por ella acertaba la mitad de las veces.
+  -- Fuera siguen quedando los sin correo, los que dijeron que no y los
+  -- que tienen la dirección mal escrita.
   SELECT count(*) INTO v_count
   FROM hub_resolve_audience(v_owner, ARRAY[v_biz, v_biz2], 'discount', 30);
-  RAISE NOTICE '1. Audiencia resuelta: % (esperado 5: dedupe de Ana, fuera sin-email/opt-out/malformado)', v_count;
-  ASSERT v_count = 5, 'La audiencia deberia ser 5';
+  RAISE NOTICE '1. Audiencia resuelta: % (esperado 6: Ana ×2, fuera sin-email/opt-out/malformado)', v_count;
+  ASSERT v_count = 6, 'La audiencia deberia ser 6';
 
-  -- El contador que ve el usuario debe dar exactamente lo mismo.
+  -- El contador que ve el usuario debe dar exactamente lo mismo. Si no
+  -- coincidiera, se cobraría una cifra y se enviaría otra.
   SELECT get_campaign_recipient_count(ARRAY[v_biz, v_biz2], 'discount', 30) INTO v_count;
   RAISE NOTICE '2. Contador del interfaz: % (debe coincidir con la audiencia)', v_count;
-  ASSERT v_count = 5, 'El contador debe coincidir con la audiencia';
+  ASSERT v_count = 6, 'El contador debe coincidir con la audiencia';
 
   -- ── 2. Saldo ──────────────────────────────────────────────────────
   INSERT INTO public.hub_credit_packs (code, name, credits, price_cents, sort_order)
@@ -77,8 +83,8 @@ BEGIN
   RETURNING id INTO v_campaign;
 
   SELECT hub_materialize_campaign(v_campaign, 1000) INTO v_count;
-  RAISE NOTICE '5. Destinatarios encolados: % (esperado 5)', v_count;
-  ASSERT v_count = 5, 'Deberian encolarse 5';
+  RAISE NOTICE '5. Destinatarios encolados: % (esperado 6, los mismos que se contaron)', v_count;
+  ASSERT v_count = 6, 'Deberian encolarse 6';
 
   -- Reintentar no debe duplicar ni permitir re-materializar.
   BEGIN
@@ -109,8 +115,8 @@ BEGIN
   ASSERT v_count = 3, 'El tramo deberia ser 3';
 
   SELECT count(*) INTO v_count FROM hub_claim_recipient_batch(v_campaign, 100);
-  RAISE NOTICE '10. Segundo tramo: % (esperado 2, el resto)', v_count;
-  ASSERT v_count = 2, 'Deberian quedar 2';
+  RAISE NOTICE '10. Segundo tramo: % (esperado 3, el resto)', v_count;
+  ASSERT v_count = 3, 'Deberian quedar 3';
 
   SELECT count(*) INTO v_count FROM hub_claim_recipient_batch(v_campaign, 100);
   ASSERT v_count = 0, 'La cola deberia estar vacia';
@@ -138,8 +144,16 @@ BEGIN
   RAISE NOTICE '13. Evento atrasado ignorado correctamente';
 
   -- Queja de spam: supresion global automatica
+  --
+  -- Se busca a OTRA PERSONA, no a otra fila. Ahora que quien es cliente de
+  -- dos sucursales tiene dos filas, «la siguiente fila» era la segunda de
+  -- Ana: la queja y la baja de más abajo recaían sobre la misma persona y
+  -- la comprobación 17 dejaba de medir lo que pretende, que es que dos
+  -- supresiones distintas excluyan a dos personas distintas.
   SELECT id INTO v_rec FROM hub_campaign_recipients
-  WHERE campaign_id = v_campaign AND id <> v_rec ORDER BY email LIMIT 1;
+  WHERE campaign_id = v_campaign
+    AND email <> (SELECT email FROM hub_campaign_recipients WHERE id = v_rec)
+  ORDER BY email LIMIT 1;
   PERFORM hub_apply_email_event(v_resend || v_rec::text, 'email.complained');
   SELECT count(*) INTO v_count FROM hub_email_suppressions WHERE reason = 'complaint';
   RAISE NOTICE '14. Supresiones por queja: % (esperado 1)', v_count;
@@ -157,8 +171,10 @@ BEGIN
   -- ── 8. La supresión excluye de la siguiente campaña ───────────────
   SELECT count(*) INTO v_count
   FROM hub_resolve_audience(v_owner, ARRAY[v_biz, v_biz2], 'discount', 30);
-  RAISE NOTICE '17. Audiencia tras baja + queja: % (esperado 3 de los 5)', v_count;
-  ASSERT v_count = 3, 'Las supresiones deben excluir a 2';
+  RAISE NOTICE '17. Audiencia tras baja + queja: % (esperado 3 de los 6)', v_count;
+  -- Ana se va con sus dos filas —una baja calla todas sus sucursales— y el
+  -- de la queja con la suya: tres filas menos de seis.
+  ASSERT v_count = 3, 'Las supresiones deben excluir a Ana (x2) y al de la queja';
 
   -- ── 9. Atribución y retorno ───────────────────────────────────────
   SELECT unsubscribe_token INTO v_token
