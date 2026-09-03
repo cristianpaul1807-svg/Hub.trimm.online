@@ -93,18 +93,29 @@ serve(async (req) => {
       .maybeSingle()
 
     // ── Datos de ejemplo ───────────────────────────────────────────
-    // El nombre del negocio sale de una sucursal real del grupo para que la
-    // vista previa se parezca a lo que va a recibir la gente.
-    let negocio = String(business_name ?? '').trim()
-    if (!negocio) {
-      const { data: biz } = await supabase
-        .from('hub_connections')
-        .select('businesses(name)')
-        .eq('hub_owner_id', user.id)
-        .limit(1)
-        .maybeSingle()
-      negocio = (biz as any)?.businesses?.name?.trim() || 'Tu negocio'
-    }
+    // Salen de una sucursal real del grupo. El nombre, para que la vista
+    // previa se parezca a lo que va a recibir la gente; y el identificador,
+    // para que el botón lleve a una página que existe.
+    //
+    // La primera versión ponía /b/ejemplo, un identificador inventado, y el
+    // botón del correo de prueba respondía «negocio no encontrado». Una
+    // prueba sirve para ver lo que verá el cliente: si al pulsar el botón
+    // sale un error, lo que aprendes es a desconfiar de todo el correo.
+    const { data: vinculos } = await supabase
+      .from('hub_connections')
+      .select('businesses(name, slug)')
+      .eq('hub_owner_id', user.id)
+      .limit(20)
+
+    const sucursales = (vinculos ?? [])
+      .map((v: any) => v.businesses)
+      .filter((b: any) => b?.slug)
+
+    const pedido = String(business_name ?? '').trim()
+    const elegida = sucursales.find((b: any) => b.name?.trim() === pedido)
+      ?? sucursales[0]
+
+    const negocio = pedido || elegida?.name?.trim() || 'Tu negocio'
 
     // El código de muestra. El de verdad no existe todavía —se crea al
     // lanzar la campaña— pero la caja tiene que verse, porque ocupa sitio
@@ -120,13 +131,25 @@ serve(async (req) => {
       : 'TRIMM'
     const codigoMuestra = `${prefijo}-EJEMP`
 
-    // Enlaces de ejemplo: la vista previa no debe atribuir reservas ni dar
-    // de baja a nadie si alguien pincha.
+    // El botón lleva a la reserva de verdad, pero SIN el ?tc= de la
+    // campaña. Es la diferencia que importa: la página abre y se ve como la
+    // verá el cliente, y a la vez la prueba no atribuye ninguna reserva a
+    // una campaña que todavía no existe.
+    //
+    // Si el grupo no tuviera ninguna sucursal con identificador, se cae a
+    // la portada en lugar de a una página inexistente.
+    const enlaceReserva = elegida?.slug
+      ? `${APP_URL}/b/${elegida.slug}`
+      : APP_URL
+
+    // El de baja sí va con un token falso, a propósito: dar de baja de
+    // verdad desde una prueba sería mucho peor que ver un aviso de enlace
+    // caducado.
     const datos = {
       clientName: 'Ana',
       businessName: negocio,
       discountValue: Number.isFinite(discount_value) ? discount_value : 10,
-      bookingUrl: `${APP_URL}/b/ejemplo`,
+      bookingUrl: enlaceReserva,
       unsubscribeUrl: `${HUB_URL}/baja?t=ejemplo`,
       promoCode: codigoMuestra,
     }
