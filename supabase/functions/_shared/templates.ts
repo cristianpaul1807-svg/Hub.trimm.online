@@ -18,6 +18,8 @@ export type Layout = 'hero' | 'offer' | 'plain' | 'card'
 
 export interface Template {
   layout: Layout
+  /** Idioma del contenido. Decide también los textos del renderizador. */
+  lang?: string | null
   subject: string
   preheader?: string | null
   headline?: string | null
@@ -44,6 +46,74 @@ export interface RenderContext {
   unsubscribeUrl: string
   /** El código de la campaña. Es lo que hace real el descuento. */
   promoCode?: string | null
+  /**
+   * Idioma del correo. Sale de la plantilla, no de la interfaz: quien
+   * escribe puede tener el Hub en español y el salón en Milán.
+   */
+  lang?: string | null
+}
+
+// ── Los textos que pone el renderizador ─────────────────────────────
+//
+// No son decoración de una pantalla: son párrafos del correo que recibe el
+// cliente. Estaban en español fijo, así que una plantilla italiana salía
+// con «TU CÓDIGO» y un pie en español — y quien lo recibía no entendía la
+// mitad del mensaje.
+//
+// Van aquí y no en la plantilla porque no se editan: son la mecánica del
+// correo (el código, la baja, quién lo manda), no su contenido comercial.
+const TEXTOS = {
+  es: {
+    codigo: 'Tu código',
+    reservaEn: 'Reserva en',
+    conCodigo: 'y añade tu código de promoción antes de pagar.',
+    sinCodigo: 'cuando te venga bien.',
+    recibes: 'Recibes este correo porque eres cliente de',
+    baja: 'Darse de baja de estos avisos',
+    enviadoCon: 'Enviado con TRIMM',
+  },
+  en: {
+    codigo: 'Your code',
+    reservaEn: 'Book at',
+    conCodigo: 'and add your promo code before paying.',
+    sinCodigo: 'whenever suits you.',
+    recibes: 'You are receiving this email because you are a customer of',
+    baja: 'Unsubscribe from these emails',
+    enviadoCon: 'Sent with TRIMM',
+  },
+  fr: {
+    codigo: 'Votre code',
+    reservaEn: 'Réservez chez',
+    conCodigo: 'et ajoutez votre code promo avant de payer.',
+    sinCodigo: 'quand cela vous convient.',
+    recibes: 'Vous recevez cet e-mail parce que vous êtes client de',
+    baja: 'Se désabonner de ces e-mails',
+    enviadoCon: 'Envoyé avec TRIMM',
+  },
+  it: {
+    codigo: 'Il tuo codice',
+    reservaEn: 'Prenota da',
+    conCodigo: 'e aggiungi il tuo codice promozionale prima di pagare.',
+    sinCodigo: 'quando ti fa comodo.',
+    recibes: 'Ricevi questa email perché sei cliente di',
+    baja: 'Annulla l\'iscrizione a queste email',
+    enviadoCon: 'Inviato con TRIMM',
+  },
+  pt: {
+    codigo: 'O teu código',
+    reservaEn: 'Reserva em',
+    conCodigo: 'e adiciona o teu código promocional antes de pagar.',
+    sinCodigo: 'quando te der jeito.',
+    recibes: 'Recebes este email porque és cliente de',
+    baja: 'Cancelar a subscrição destes avisos',
+    enviadoCon: 'Enviado com TRIMM',
+  },
+} as const
+
+/** Los textos del idioma pedido, o los españoles si no lo tenemos. */
+function textos(lang: string | null | undefined) {
+  const k = String(lang ?? 'es').toLowerCase() as keyof typeof TEXTOS
+  return TEXTOS[k] ?? TEXTOS.es
 }
 
 // ── Escapado ────────────────────────────────────────────────────────
@@ -176,15 +246,13 @@ function ctaBlock(label: string, url: string, color: string, ctx: RenderContext)
 /** Qué hacer, dicho con palabras, cuando no hay un enlace de fiar. */
 function instruccion(ctx: RenderContext, color: string): string {
   const negocio = escapeHtml(ctx.businessName)
-  const conCodigo = !!ctx.promoCode
+  const T = textos(ctx.lang)
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:26px 0 8px;">
     <tr><td style="background:#f8fafc;border-left:4px solid ${color};border-radius:0 12px 12px 0;padding:18px 22px;">
-      <p style="margin:0;font-size:15px;color:#0f172a;font-weight:700;line-height:1.6;">Reserva en ${negocio}</p>
+      <p style="margin:0;font-size:15px;color:#0f172a;font-weight:700;line-height:1.6;">${T.reservaEn} ${negocio}</p>
       <p style="margin:6px 0 0;font-size:14px;color:#475569;line-height:1.6;">${
-        conCodigo
-          ? 'y añade tu código de promoción antes de pagar.'
-          : 'cuando te venga bien.'
+        ctx.promoCode ? T.conCodigo : T.sinCodigo
       }</p>
     </td></tr>
   </table>`
@@ -228,9 +296,14 @@ function shell(inner: string, ctx: RenderContext, brand: Brand | null | undefine
   const unsub = safeUrl(ctx.unsubscribeUrl)
   const firma = brand?.signature?.trim()
   const nota = brand?.footer_note?.trim()
+  const T = textos(ctx.lang)
+
+  // El idioma del documento también: lo usan los lectores de pantalla y el
+  // corrector del cliente de correo para saber en qué lengua está esto.
+  const codigoIdioma = /^[a-z]{2}$/.test(String(ctx.lang ?? '')) ? ctx.lang : 'es'
 
   return `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="${codigoIdioma}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(ctx.businessName)}</title></head>
 <body style="margin:0;padding:24px 12px;background:#f8fafc;">
 ${pre}
@@ -242,8 +315,8 @@ ${inner}
   ${firma ? `<p style="font-size:13px;color:#64748b;margin:0 0 14px;line-height:1.6;">${fillVariables(escapeHtml(firma), ctx)}</p>` : ''}
   <p style="font-size:11px;color:#94a3b8;text-align:center;margin:0;line-height:1.7;">
     ${nota ? fillVariables(escapeHtml(nota), ctx) + '<br>' : ''}
-    Recibes este correo porque eres cliente de ${escapeHtml(ctx.businessName)}.<br>
-    ${unsub ? `<a href="${unsub}" style="color:#64748b;text-decoration:underline;">Darse de baja de estos avisos</a> &nbsp;·&nbsp; ` : ''}Enviado con TRIMM
+    ${T.recibes} ${escapeHtml(ctx.businessName)}.<br>
+    ${unsub ? `<a href="${unsub}" style="color:#64748b;text-decoration:underline;">${T.baja}</a> &nbsp;·&nbsp; ` : ''}${T.enviadoCon}
   </p>
 </td></tr>
 </table>
@@ -274,7 +347,7 @@ function destino(t: Template, ctx: RenderContext): string {
 function autoCodeBox(t: Template, ctx: RenderContext, color: string): string {
   if (!ctx.promoCode) return ''
   if (/\{\{\s*codigo\s*\}\}/i.test(t.body ?? '')) return ''
-  return codeBox(ctx.promoCode, color, 'Tu código')
+  return codeBox(ctx.promoCode, color, textos(ctx.lang).codigo)
 }
 
 // ── Maquetas ────────────────────────────────────────────────────────
@@ -351,18 +424,25 @@ export function renderEmail(
   // El color de la plantilla manda sobre el de la marca; si no hay ninguno,
   // el azul de TRIMM.
   const color = safeColor(t.accent_color ?? brand?.accent_color)
-  const pre = preheader(t.preheader, ctx)
+
+  // El idioma se toma de la plantilla y viaja en el contexto a partir de
+  // aquí. Se deriva en un solo sitio a propósito: si cada quien que llama
+  // tuviera que acordarse de pasarlo, el día que a uno se le olvide el
+  // correo sale con el pie en español y nadie se entera hasta que lo
+  // recibe una clienta.
+  const ctxi: RenderContext = { ...ctx, lang: ctx.lang ?? t.lang ?? 'es' }
+  const pre = preheader(t.preheader, ctxi)
 
   let inner: string
   switch (t.layout) {
-    case 'offer': inner = offerLayout(t, ctx, brand, color); break
-    case 'card':  inner = cardLayout(t, ctx, brand, color);  break
-    case 'plain': inner = plainLayout(t, ctx, brand, color); break
-    default:      inner = heroLayout(t, ctx, brand, color);
+    case 'offer': inner = offerLayout(t, ctxi, brand, color); break
+    case 'card':  inner = cardLayout(t, ctxi, brand, color);  break
+    case 'plain': inner = plainLayout(t, ctxi, brand, color); break
+    default:      inner = heroLayout(t, ctxi, brand, color);
   }
 
   return {
-    subject: fillSubject(t.subject, ctx) || ctx.businessName,
-    html: shell(inner, ctx, brand, pre),
+    subject: fillSubject(t.subject, ctxi) || ctxi.businessName,
+    html: shell(inner, ctxi, brand, pre),
   }
 }

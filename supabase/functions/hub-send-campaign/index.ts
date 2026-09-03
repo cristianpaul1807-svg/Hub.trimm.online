@@ -208,6 +208,8 @@ serve(async (req) => {
               bookingUrl: bookingUrl(biz, r.unsubscribe_token),
               unsubscribeUrl: unsubscribeUrl(r.unsubscribe_token),
               promoCode: codigo,
+              // El idioma no se pasa: renderEmail lo toma de la plantilla,
+              // que es de donde tiene que salir.
             }, marca)
           : renderTemplate(campaign.template_type, {
               businessName: bizName,

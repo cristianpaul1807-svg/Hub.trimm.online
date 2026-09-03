@@ -42,7 +42,22 @@ export default function Templates() {
       const [tpls, br] = await Promise.all([fetchTemplates(lang), fetchBrand(user.id)]);
       setItems(tpls);
       setBrand(br);
-      setSel((actual) => actual ?? tpls[0] ?? null);
+
+      // Al cambiar el idioma no basta con recargar la lista: la plantilla
+      // elegida sigue siendo la de antes, y la vista previa se queda en el
+      // idioma anterior aunque el catálogo ya esté en el nuevo. Se salta a
+      // la equivalente —la del mismo código— para que el correo cambie de
+      // idioma cuando lo cambia el Hub.
+      //
+      // Si la elegida era propia, no tiene equivalente en otro idioma: la
+      // escribió su dueño en el que quiso y se queda como está.
+      setSel((actual) => {
+        if (!actual) return tpls[0] ?? null;
+        return tpls.find((t) => t.id === actual.id)
+          ?? tpls.find((t) => t.is_system && t.code === actual.code)
+          ?? tpls[0]
+          ?? null;
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {

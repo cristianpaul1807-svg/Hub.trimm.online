@@ -39,6 +39,7 @@ MIGRATION_FILES=(
   20260903_hub_templates_i18n.sql
   20260903_hub_render_cta_url.sql
   20260904_hub_audiencia_por_sucursal.sql
+  20260904_hub_render_lang.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {

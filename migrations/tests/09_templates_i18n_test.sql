@@ -117,6 +117,13 @@ BEGIN
       r->'template'->>'cta_url';
     ASSERT r->'template'->>'cta_url' = 'https://reservas.ejemplo.com',
       'El enlace del boton debe llegar al worker';
+
+    -- Y el idioma, que decide los textos que pone el propio renderizador:
+    -- la etiqueta del código, la instrucción y el pie entero.
+    RAISE NOTICE '13. Y lleva el idioma de la plantilla: %',
+      r->'template'->>'lang';
+    ASSERT r->'template'->>'lang' IS NOT NULL,
+      'El idioma debe llegar al worker o el pie sale siempre en espanol';
   END;
 
   RAISE NOTICE '';

@@ -213,5 +213,50 @@ const i4 = T.renderEmail(
 ok('un cta_url propio manda sobre la instrucción',
    i4.html.includes('prenotazioni.ejemplo.com') && !i4.html.includes('Reserva en Salón Centro'))
 
+// ── El correo habla el idioma de la plantilla ───────────────────────
+// No el de la interfaz: quien escribe puede tener el Hub en español y el
+// salón en Milán. Y estos textos no los edita nadie, los pone el
+// renderizador, así que si no se traducen aquí no se traducen en ningún
+// sitio.
+const conCodigo = { ...ctx, promoCode: 'DTO20-MU5BD' };
+
+const it = T.renderEmail(
+  { layout: 'plain', lang: 'it', subject: 'x', body: 'y', cta_label: 'Prenota' }, conCodigo)
+ok('en italiano la etiqueta del código',  it.html.includes('Il tuo codice'))
+ok('y el pie va en italiano',             it.html.includes('Ricevi questa email perché sei cliente di'))
+ok('y la baja también',                   it.html.includes('Annulla'))
+ok('sin rastro del español',              !it.html.includes('Tu código') && !it.html.includes('Recibes este correo'))
+
+// Con cta_label: sin él no hay botón que sustituir, así que tampoco
+// instrucción — quien no quiso llamada a la acción no debe recibir una.
+const en = T.renderEmail(
+  { layout: 'plain', lang: 'en', subject: 'x', body: 'y', cta_label: 'Book' },
+  { ...conCodigo, bookingUrl: '' })
+ok('en inglés la instrucción',            en.html.includes('Book at Salón Centro'))
+ok('y pide el código en inglés',          en.html.includes('add your promo code before paying'))
+
+const fr = T.renderEmail({ layout: 'plain', lang: 'fr', subject: 'x', body: 'y' }, conCodigo)
+ok('en francés el pie',                   fr.html.includes('Envoyé avec TRIMM'))
+
+// Sin idioma, o con uno que no tenemos, el español: es el catálogo
+// completo y el respaldo de todos los demás.
+const sin = T.renderEmail({ layout: 'plain', subject: 'x', body: 'y' }, conCodigo)
+ok('sin idioma, español',                 sin.html.includes('Tu código'))
+
+const de = T.renderEmail({ layout: 'plain', lang: 'de', subject: 'x', body: 'y' }, conCodigo)
+ok('un idioma que no tenemos cae al español', de.html.includes('Tu código'))
+
+// Sin etiqueta de botón no hay llamada a la acción de ninguna clase.
+const sinCta = T.renderEmail(
+  { layout: 'plain', subject: 'x', body: 'y' }, { ...conCodigo, bookingUrl: '' })
+ok('sin cta_label tampoco hay instrucción', !sinCta.html.includes('Reserva en'))
+
+ok('el documento declara su idioma',
+   T.renderEmail({ layout: 'plain', lang: 'it', subject: 'x', body: 'y' }, ctx)
+    .html.includes('<html lang="it">'))
+ok('y un idioma inventado no entra en el atributo',
+   T.renderEmail({ layout: 'plain', lang: '"><script>', subject: 'x', body: 'y' }, ctx)
+    .html.includes('<html lang="es">'))
+
 console.log(`\n${fallos === 0 ? 'Todas las comprobaciones del renderizador pasan.' : fallos + ' FALLOS'}`)
 process.exit(fallos ? 1 : 0)
