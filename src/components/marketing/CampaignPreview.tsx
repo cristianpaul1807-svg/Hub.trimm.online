@@ -7,6 +7,8 @@ interface Props {
   campaignType: string;
   discountValue?: number;
   businessName?: string;
+  /** Plantilla elegida en el asistente. Sin ella manda la maqueta del tipo. */
+  templateId?: string | null;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * diferencia por una queja.
  */
 export default function CampaignPreview({
-  campaignType, discountValue, businessName,
+  campaignType, discountValue, businessName, templateId,
 }: Props) {
   const [html, setHtml] = useState('');
   const [subject, setSubject] = useState('');
@@ -43,7 +45,7 @@ export default function CampaignPreview({
     setCargando(true);
     timer.current = setTimeout(async () => {
       try {
-        const r = await previewCampaign(campaignType, { discountValue, businessName });
+        const r = await previewCampaign(campaignType, { discountValue, businessName, templateId });
         setSubject(r.subject);
         setHtml(r.html);
         setError('');
@@ -54,7 +56,7 @@ export default function CampaignPreview({
       }
     }, 350);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [campaignType, discountValue, businessName]);
+  }, [campaignType, discountValue, businessName, templateId]);
 
   useEffect(() => {
     fetchCampaignQuota(campaignType).then(setQuota);
@@ -64,7 +66,7 @@ export default function CampaignPreview({
     setEnviando(true);
     setError('');
     try {
-      const r = await sendCampaignTest(campaignType, { discountValue, businessName });
+      const r = await sendCampaignTest(campaignType, { discountValue, businessName, templateId });
       setQuota(r.quota);
       setOk(r.sent_to);
       setAvisoAbierto(false);

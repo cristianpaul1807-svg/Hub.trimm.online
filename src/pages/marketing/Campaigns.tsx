@@ -9,6 +9,8 @@ import CampaignStatusBadge from '../../components/marketing/CampaignStatusBadge'
 import {
   CreditSummary, EMPTY_SUMMARY, fetchCreditSummary, formatCredits,
 } from '../../lib/credits';
+import { fetchTemplates, type EmailTemplate } from '../../lib/templates';
+import { useHubLang } from '../../contexts/HubLanguageContext';
 
 type TemplateType = 'reengagement' | 'discount' | 'loyalty';
 type Step = 1 | 2 | 3;
@@ -38,6 +40,7 @@ const TEMPLATE_INFO: Record<TemplateType, {
 
 export default function Campaigns() {
   const { user } = useHubAuth();
+  const { lang } = useHubLang();
 
   const [step, setStep] = useState<Step>(1);
   const [showCreator, setShowCreator] = useState(false);
@@ -51,6 +54,10 @@ export default function Campaigns() {
 
   // Formulario
   const [template, setTemplate] = useState<TemplateType>('discount');
+  // Vacío = la maqueta que trae el tipo de campaña, que es lo que se mandaba
+  // cuando aquí no se podía elegir nada.
+  const [templateId, setTemplateId] = useState<string>('');
+  const [plantillas, setPlantillas] = useState<EmailTemplate[]>([]);
   const [targetAll, setTargetAll] = useState(true);
   const [selectedBizIds, setSelectedBizIds] = useState<string[]>([]);
   const [discountValue, setDiscountValue] = useState(15);
@@ -85,6 +92,18 @@ export default function Campaigns() {
   }, [user]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // El catálogo, en el idioma del Hub. Si falla no se rompe el asistente:
+  // sin plantillas se manda la del tipo de campaña, como antes.
+  useEffect(() => {
+    fetchTemplates(lang).then(setPlantillas).catch(() => setPlantillas([]));
+  }, [lang]);
+
+  // Una plantilla que ya no está en el catálogo —cambió el idioma, o se
+  // borró— no puede quedarse elegida a la sombra.
+  useEffect(() => {
+    if (templateId && !plantillas.some((p) => p.id === templateId)) setTemplateId('');
+  }, [plantillas, templateId]);
 
   // Recalcular la audiencia real. Usa la misma función que después decide a
   // quién se envía, así que la cifra mostrada no puede divergir del envío.
@@ -132,6 +151,7 @@ export default function Campaigns() {
     try {
       const { data, error: fnErr } = await supabase.functions.invoke('hub-campaign-enqueue', {
         body: {
+          template_id: templateId || null,
           template_type: template,
           target_business_ids: bizIds,
           discount_value: template === 'discount' ? discountValue : null,
@@ -331,11 +351,42 @@ export default function Campaigns() {
                 </div>
               )}
 
+              {/* Qué correo se manda. El tipo de campaña de arriba decide a
+                  quién se escribe; esto decide qué lee. Por defecto va la
+                  maqueta del tipo, que es lo que salía cuando aquí no se
+                  podía elegir: quien no toque nada manda lo mismo de antes. */}
+              <div className="space-y-2">
+                <label htmlFor="plantilla" className="text-xs font-bold text-hubText2">
+                  Plantilla del correo
+                </label>
+                <select
+                  id="plantilla"
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  className="w-full bg-hubSurface2 border border-hubBorder rounded-xl px-3 py-2.5 text-xs font-bold text-hubText focus:outline-none focus:border-hubBlue"
+                >
+                  <option value="">La estándar de este tipo de campaña</option>
+                  {plantillas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.is_system ? '' : ' · mía'}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-hubText3 font-medium leading-snug">
+                  Para escribir la tuya, duplica una en{' '}
+                  <Link to="/dashboard/marketing/templates" className="text-hubBlue font-bold hover:underline">
+                    Plantillas
+                  </Link>{' '}
+                  y vuelve aquí: aparecerá en esta lista.
+                </p>
+              </div>
+
               {/* El correo real, antes de pagar por él. Aquí es donde se
                   detecta el descuento mal puesto: en el paso 3 ya se está
                   decidiendo cuánto gastar, no si el correo está bien. */}
               <CampaignPreview
                 campaignType={template}
+                templateId={templateId || null}
                 discountValue={template === 'discount' ? discountValue : undefined}
                 businessName={nombreNegocio}
               />
@@ -387,6 +438,7 @@ export default function Campaigns() {
                   </div>
 
                   <DirectPayPanel
+                    templateId={templateId || null}
                     templateType={template}
                     targetBusinessIds={bizIds}
                     discountValue={template === 'discount' ? discountValue : undefined}

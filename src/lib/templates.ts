@@ -218,9 +218,18 @@ export async function previewTemplate(
 }
 
 // ── Vista previa de una campaña del asistente ────────────────────────
-// El asistente no usa plantillas guardadas: la maqueta la decide el tipo
-// de campaña. Se pide al servidor por el mismo camino que la vista previa
-// de plantillas, para que lo que se ve sea lo que se manda.
+// El tipo de campaña decide a quién se escribe; la plantilla, qué se le
+// escribe. Sin plantilla elegida la maqueta la pone el tipo, que es lo que
+// hacía el asistente cuando no se podía elegir. Se pide al servidor por el
+// mismo camino que la vista previa de plantillas, para que lo que se ve sea
+// lo que se manda.
+
+/** La plantilla del sistema que le toca a cada tipo si no se elige otra. */
+export const CODIGO_POR_TIPO: Record<string, string> = {
+  discount: 'descuento',
+  reengagement: 'recuperacion',
+  loyalty: 'fidelidad',
+};
 
 /** Cuántas pruebas quedan hoy para este tipo de campaña. No gasta ninguna. */
 export async function fetchCampaignQuota(campaignType: string): Promise<TestQuota | null> {
@@ -233,11 +242,12 @@ export async function fetchCampaignQuota(campaignType: string): Promise<TestQuot
 
 export async function previewCampaign(
   campaignType: string,
-  opts: { discountValue?: number; businessName?: string } = {},
+  opts: { discountValue?: number; businessName?: string; templateId?: string | null } = {},
 ): Promise<{ subject: string; html: string }> {
   const { data, error } = await supabase.functions.invoke('hub-template-preview', {
     body: {
       campaign_type: campaignType,
+      template_id: opts.templateId ?? null,
       discount_value: opts.discountValue,
       business_name: opts.businessName,
     },
@@ -255,11 +265,12 @@ export async function previewCampaign(
  */
 export async function sendCampaignTest(
   campaignType: string,
-  opts: { discountValue?: number; businessName?: string } = {},
+  opts: { discountValue?: number; businessName?: string; templateId?: string | null } = {},
 ): Promise<{ sent_to: string; quota: TestQuota }> {
   const { data, error } = await supabase.functions.invoke('hub-template-preview', {
     body: {
       campaign_type: campaignType,
+      template_id: opts.templateId ?? null,
       discount_value: opts.discountValue,
       business_name: opts.businessName,
       send_test: true,
