@@ -3,25 +3,9 @@ import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import AppointmentsChart from '../components/charts/AppointmentsChart';
+import { rangoDe, type Period } from '../lib/periods';
 
-type Period = 'today' | 'week' | 'month' | 'year';
 type Metric = 'revenue' | 'appointments' | 'avg_ticket' | 'cancellations';
-
-function getPeriodRange(period: Period, offset = 0): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
-  let from = new Date(now);
-  if (period === 'today') { from.setHours(0, 0, 0, 0); }
-  else if (period === 'week') { from.setDate(now.getDate() - 7); }
-  else if (period === 'month') { from.setDate(1); from.setHours(0, 0, 0, 0); }
-  else { from.setFullYear(now.getFullYear(), 0, 1); from.setHours(0, 0, 0, 0); }
-  if (offset) {
-    const diff = to.getTime() - from.getTime();
-    to.setTime(from.getTime());
-    from.setTime(from.getTime() - diff);
-  }
-  return { from, to };
-}
 
 interface BranchStat {
   business_id: string;
@@ -72,8 +56,8 @@ export default function Comparator() {
     if (!linkedIds.length) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { from: f1, to: t1 } = getPeriodRange(period);
-      const { from: f2, to: t2 } = getPeriodRange(period, 1);
+      const { from: f1, to: t1 } = rangoDe(period);
+      const { from: f2, to: t2 } = rangoDe(period, 1);
 
       const buildStats = async (from: Date, to: Date): Promise<BranchStat[]> => {
         const { data } = await supabase

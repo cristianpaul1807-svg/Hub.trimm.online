@@ -63,9 +63,9 @@ export const pt: HubTranslations = {
   },
   periods: {
     today: 'Hoje',
-    week: 'Semana',
-    month: 'Mês',
-    year: 'Ano',
+    week: '7 dias',
+    month: '30 dias',
+    year: '12 meses',
   },
   metrics: {
     totalRevenue: 'Faturado total',
@@ -153,7 +153,7 @@ export const pt: HubTranslations = {
     share: 'Peso',
   },
   analytics: {
-    quarter: 'Trimestre',
+    quarter: '90 dias',
     occupancyTitle: 'Ocupação',
     occupancyHelp: 'Sobre o horário de abertura e {n} funcionários ativos',
     noSchedule: 'Sem horário de abertura não é possível calcular',

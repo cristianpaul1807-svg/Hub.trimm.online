@@ -4,8 +4,7 @@ import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import MetricCard from '../components/MetricCard';
 import RevenueChart from '../components/charts/RevenueChart';
-
-type Period = 'today' | 'week' | 'month' | 'year';
+import { rangoDe, type Period } from '../lib/periods';
 
 interface DashboardProps {
   selectedBusinessId: string | null;
@@ -19,25 +18,6 @@ interface HubMetrics {
   avg_ticket: number;
   active_loyalty_cards: number;
   discounts_applied: number;
-}
-
-function getPeriodRange(period: Period): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
-  let from = new Date(now);
-
-  if (period === 'today') {
-    from.setHours(0, 0, 0, 0);
-  } else if (period === 'week') {
-    from.setDate(now.getDate() - 7);
-  } else if (period === 'month') {
-    from.setDate(1);
-    from.setHours(0, 0, 0, 0);
-  } else {
-    from.setFullYear(now.getFullYear(), 0, 1);
-    from.setHours(0, 0, 0, 0);
-  }
-  return { from, to };
 }
 
 function formatCurrency(n: number, _currency = '€') {
@@ -83,7 +63,7 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
     if (!linkedIds.length) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { from, to } = getPeriodRange(period);
+      const { from, to } = rangoDe(period);
       const ids = selectedBusinessId ? [selectedBusinessId] : linkedIds;
 
       const { data, error } = await supabase.rpc('get_hub_metrics', {

@@ -61,9 +61,9 @@ export const en = {
   },
   periods: {
     today: 'Today',
-    week: 'Week',
-    month: 'Month',
-    year: 'Year',
+    week: '7 days',
+    month: '30 days',
+    year: '12 months',
   },
   metrics: {
     totalRevenue: 'Total Revenue',
@@ -151,7 +151,7 @@ export const en = {
     share: 'Share',
   },
   analytics: {
-    quarter: 'Quarter',
+    quarter: '90 days',
     occupancyTitle: 'Occupancy',
     occupancyHelp: 'Against opening hours and {n} active staff',
     noSchedule: 'Cannot be calculated without opening hours set',

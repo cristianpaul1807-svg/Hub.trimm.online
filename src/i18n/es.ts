@@ -61,9 +61,9 @@ export const es = {
   },
   periods: {
     today: 'Hoy',
-    week: 'Semana',
-    month: 'Mes',
-    year: 'Año',
+    week: '7 días',
+    month: '30 días',
+    year: '12 meses',
   },
   metrics: {
     totalRevenue: 'Facturado total',
@@ -151,7 +151,7 @@ export const es = {
     share: 'Peso',
   },
   analytics: {
-    quarter: 'Trimestre',
+    quarter: '90 días',
     occupancyTitle: 'Ocupación',
     occupancyHelp: 'Sobre el horario de apertura y {n} empleados activos',
     noSchedule: 'Sin horario de apertura configurado no se puede calcular',

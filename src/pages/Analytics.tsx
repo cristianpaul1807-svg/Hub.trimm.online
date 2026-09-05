@@ -3,6 +3,7 @@ import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import DistributionChart from '../components/charts/DistributionChart';
+import { rangoDe, type Period } from '../lib/periods';
 
 /**
  * Análisis — de qué está hecho el negocio.
@@ -16,8 +17,6 @@ import DistributionChart from '../components/charts/DistributionChart';
  * cancelación, valoraciones— no aparece: un panel de guiones no informa,
  * solo hace ruido.
  */
-
-type Period = 'month' | 'quarter' | 'year';
 
 interface Props {
   selectedBusinessId: string | null;
@@ -34,16 +33,6 @@ interface Analytics {
   top_clients: Array<{ name: string; visits: number; spend: number; last_visit: string }>;
   notifications: Array<{ type: string; sent: number; failed: number }>;
   loyalty: { active_cards: number; rewards_redeemed: number; discount_given: number; programs_active: number };
-}
-
-function getRange(period: Period): { from: Date; to: Date } {
-  const to = new Date();
-  const from = new Date(to);
-  if (period === 'month') from.setDate(to.getDate() - 30);
-  else if (period === 'quarter') from.setDate(to.getDate() - 90);
-  else from.setFullYear(to.getFullYear() - 1);
-  from.setHours(0, 0, 0, 0);
-  return { from, to };
 }
 
 const euros = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : Number(n).toFixed(0));
@@ -102,7 +91,7 @@ export default function Analytics({ selectedBusinessId }: Props) {
     setLoading(true);
     setError('');
 
-    const { from, to } = getRange(period);
+    const { from, to } = rangoDe(period);
     const ids = selectedBusinessId ? [selectedBusinessId] : linkedIds;
 
     const { data: payload, error: err } = await supabase.rpc('get_hub_analytics', {

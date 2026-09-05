@@ -3,8 +3,8 @@ import { useHubAuth } from '../contexts/HubAuthContext';
 import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import StaffPerformanceChart from '../components/charts/StaffPerformanceChart';
+import { rangoDe, type Period } from '../lib/periods';
 
-type Period = 'today' | 'week' | 'month' | 'year';
 type SortKey = 'total_revenue' | 'total_appointments' | 'avg_ticket';
 
 interface StaffRow {
@@ -15,17 +15,6 @@ interface StaffRow {
   total_revenue: number;
   total_appointments: number;
   avg_ticket: number;
-}
-
-function getPeriodRange(period: Period): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
-  let from = new Date(now);
-  if (period === 'today') { from.setHours(0, 0, 0, 0); }
-  else if (period === 'week') { from.setDate(now.getDate() - 7); }
-  else if (period === 'month') { from.setDate(1); from.setHours(0, 0, 0, 0); }
-  else { from.setFullYear(now.getFullYear(), 0, 1); from.setHours(0, 0, 0, 0); }
-  return { from, to };
 }
 
 interface WorkersProps { selectedBusinessId: string | null; }
@@ -67,7 +56,7 @@ export default function Workers({ selectedBusinessId }: WorkersProps) {
     if (!linkedIds.length) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { from, to } = getPeriodRange(period);
+      const { from, to } = rangoDe(period);
       const ids = selectedBusinessId ? [selectedBusinessId] :
         filterBranch !== 'all' ? [filterBranch] : linkedIds;
 

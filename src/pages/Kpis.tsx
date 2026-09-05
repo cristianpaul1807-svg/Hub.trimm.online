@@ -4,6 +4,7 @@ import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import MetricCard from '../components/MetricCard';
 import RevenueChart from '../components/charts/RevenueChart';
+import { rangoDe, type Period } from '../lib/periods';
 
 /**
  * KPIs — la otra mitad de Estadísticas.
@@ -15,8 +16,6 @@ import RevenueChart from '../components/charts/RevenueChart';
  * inmediatamente anteriores, hay doce meses de tendencia detrás, y el
  * desglose por sucursal ordena de la que más factura a la que menos.
  */
-
-type Period = 'week' | 'month' | 'year';
 
 interface KpisProps {
   selectedBusinessId: string | null;
@@ -46,16 +45,6 @@ interface KpiPayload {
   previous: Snapshot;
   months: Array<{ month: string; revenue: number; completed: number }>;
   branches: Branch[];
-}
-
-function getRange(period: Period): { from: Date; to: Date } {
-  const to = new Date();
-  const from = new Date(to);
-  if (period === 'week') from.setDate(to.getDate() - 7);
-  else if (period === 'month') from.setDate(to.getDate() - 30);
-  else from.setFullYear(to.getFullYear() - 1);
-  from.setHours(0, 0, 0, 0);
-  return { from, to };
 }
 
 /**
@@ -112,7 +101,7 @@ export default function Kpis({ selectedBusinessId }: KpisProps) {
     setLoading(true);
     setError('');
 
-    const { from, to } = getRange(period);
+    const { from, to } = rangoDe(period);
     const ids = selectedBusinessId ? [selectedBusinessId] : linkedIds;
 
     const { data: payload, error: err } = await supabase.rpc('get_hub_kpis', {
