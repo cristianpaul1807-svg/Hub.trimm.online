@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:migrations": "./migrations/tests/run.sh",
-    "check:landing": "node scripts/check-landing.mjs"
+    "check:landing": "node scripts/check-landing.mjs",
+    "check:lang": "node scripts/check-lang.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.4.1",
