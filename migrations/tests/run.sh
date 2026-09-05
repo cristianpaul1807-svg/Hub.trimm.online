@@ -40,6 +40,7 @@ MIGRATION_FILES=(
   20260903_hub_render_cta_url.sql
   20260904_hub_audiencia_por_sucursal.sql
   20260904_hub_render_lang.sql
+  20260905_hub_vinculo_solo_con_token.sql
 )
 
 command -v "$PGBIN/initdb" >/dev/null 2>&1 || {
@@ -153,4 +154,11 @@ psql_run "-f $WORK/10_audiencia_por_sucursal_test.sql" 2>&1 \
   | grep -v '^DO$\|^CREATE FUNCTION$\|Pager usage'
 
 echo
-echo "✓ Todo verificado: motor, saldo, accesos, KPIs, análisis, cupos, pago suelto, códigos, idiomas y audiencia."
+echo "→ Ejecutando las comprobaciones del vínculo de sucursales"
+echo
+psql_run "-f $WORK/11_vinculo_token_test.sql" 2>&1 \
+  | sed 's/^psql:[^ ]* NOTICE:  //' \
+  | grep -v '^DO$\|^CREATE FUNCTION$\|^GRANT$\|Pager usage'
+
+echo
+echo "✓ Todo verificado: motor, saldo, accesos, KPIs, análisis, cupos, pago suelto, códigos, idiomas, audiencia y vínculos."
