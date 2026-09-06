@@ -29,8 +29,14 @@ export default function Unsubscribe() {
 
     let cancelled = false;
 
-    supabase.rpc('hub_unsubscribe_by_token', { p_token: token })
-      .then(({ data, error }) => {
+    // En try/catch y no en .then(...).catch(...): el constructor de consultas
+    // de supabase-js devuelve algo parecido a una promesa pero sin .catch, y
+    // sin esto un fallo de red rompía la promesa fuera del then y dejaba la
+    // rueda girando para siempre. Quien viene de un correo no va a abrir la
+    // consola para saber qué ha pasado.
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('hub_unsubscribe_by_token', { p_token: token });
         if (cancelled) return;
 
         if (error || !data?.success) {
@@ -44,7 +50,14 @@ export default function Unsubscribe() {
         }
 
         setState({ kind: 'done', email: data.email, businessName: data.business_name });
-      });
+      } catch {
+        if (cancelled) return;
+        setState({
+          kind: 'error',
+          message: 'No hemos podido conectar. Revisa tu conexión y vuelve a abrir el enlace del correo.',
+        });
+      }
+    })();
 
     return () => { cancelled = true; };
   }, [token]);

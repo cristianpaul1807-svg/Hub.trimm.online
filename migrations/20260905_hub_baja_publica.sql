@@ -1,0 +1,17 @@
+-- La página de baja vuelve a funcionar para quien no tiene sesión.
+--
+-- El pie de cada campaña lleva un enlace a hub.trimm.online/baja?t=…, y quien
+-- lo pulsa es un cliente del salón: no tiene cuenta en el Hub ni la va a
+-- tener. En producción hub_unsubscribe_by_token había perdido el permiso del
+-- rol anónimo —la migración del motor sí lo concedía— y esa página respondía
+-- 401 «permission denied». Lo que veía la persona era «no hemos podido
+-- procesar tu solicitud, inténtalo de nuevo en unos minutos», para siempre.
+--
+-- El camino automático de Gmail no estaba afectado: la cabecera
+-- List-Unsubscribe apunta a la Edge Function, que usa la clave de servicio.
+-- Solo estaba roto el enlace visible, que es el que usa la gente.
+--
+-- Conceder no abre nada de más: la función recibe un token de 16 bytes
+-- aleatorios que solo viaja dentro de un correo concreto, y con él únicamente
+-- da de baja a ese destinatario.
+GRANT EXECUTE ON FUNCTION public.hub_unsubscribe_by_token(TEXT) TO anon;
