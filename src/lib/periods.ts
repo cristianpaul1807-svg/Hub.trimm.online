@@ -57,3 +57,47 @@ export function rangoDe(
 
   return { from, to };
 }
+
+/** Una cita, tal como la necesita la gráfica. */
+export interface PuntoBruto { start_time: string; price: number | string | null }
+
+/**
+ * Agrupa la facturación para la gráfica del panel.
+ *
+ * La clave de agrupación es ordenable —2026-09-05 o 2026-09— y la etiqueta
+ * bonita se pone al final. Antes la clave era el propio texto de la etiqueta
+ * («vie, 5»), y ese texto se repite: el día 5 de cada mes cae en el mismo
+ * hueco, así que en periodos largos meses distintos se sumaban en la misma
+ * barra. Y sin ordenar por la clave, las barras salían en el orden en que la
+ * base de datos devolviera las citas, que no es ninguno en particular.
+ *
+ * @param porMes Agrupar por mes en vez de por día. 365 barras de un día no se
+ *   leen, y la gráfica está para ver la tendencia.
+ */
+export function serieDeFacturacion(
+  citas: PuntoBruto[],
+  porMes: boolean,
+  lang = 'es',
+): Array<{ date: string; total: number }> {
+  const suma: Record<string, number> = {};
+
+  for (const cita of citas) {
+    const d = new Date(cita.start_time);
+    if (Number.isNaN(d.getTime())) continue;
+    const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const clave = porMes ? mes : `${mes}-${String(d.getDate()).padStart(2, '0')}`;
+    suma[clave] = (suma[clave] ?? 0) + (Number(cita.price) || 0);
+  }
+
+  return Object.keys(suma).sort().map((clave) => {
+    // Mediodía a propósito: a medianoche, un huso al oeste de UTC devuelve
+    // el día anterior y la etiqueta no coincidiría con su barra.
+    const d = new Date(`${clave}${porMes ? '-01' : ''}T12:00:00`);
+    return {
+      date: porMes
+        ? d.toLocaleDateString(lang, { month: 'short', year: '2-digit' })
+        : d.toLocaleDateString(lang, { weekday: 'short', day: 'numeric' }),
+      total: suma[clave],
+    };
+  });
+}

@@ -4,7 +4,7 @@ import { useHubLang } from '../contexts/HubLanguageContext';
 import { supabase } from '../lib/supabase';
 import MetricCard from '../components/MetricCard';
 import RevenueChart from '../components/charts/RevenueChart';
-import { rangoDe, type Period } from '../lib/periods';
+import { rangoDe, serieDeFacturacion, type Period } from '../lib/periods';
 
 interface DashboardProps {
   selectedBusinessId: string | null;
@@ -27,7 +27,7 @@ function formatCurrency(n: number, _currency = '€') {
 
 export default function Dashboard({ selectedBusinessId }: DashboardProps) {
   const { user } = useHubAuth();
-  const { t } = useHubLang();
+  const { t, lang } = useHubLang();
   const [period, setPeriod] = useState<Period>('week');
   const [metrics, setMetrics] = useState<HubMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,29 +76,37 @@ export default function Dashboard({ selectedBusinessId }: DashboardProps) {
         setMetrics(data as HubMetrics);
       }
 
-      // Build simple per-day revenue
+      // Facturación para la gráfica.
+      //
+      // Se agrupa por una clave ordenable —2026-09-05 o 2026-09— y la
+      // etiqueta bonita se pone después. Antes la clave era el propio texto
+      // «vie, 5»: en 7 días funcionaba, y a partir de ahí no. Ese texto se
+      // repite —el día 5 de cada mes cae en el mismo hueco— así que meses
+      // distintos se sumaban en la misma barra, y como las citas no venían
+      // ordenadas, las barras salían además en cualquier orden.
+      //
+      // Por encima de un mes se agrupa por mes: 365 barras de un día no se
+      // leen, y la gráfica es para ver la tendencia.
+      const porMes = period === 'quarter' || period === 'year';
+
       const { data: appts } = await supabase
         .from('appointments')
         .select('start_time, price, business_id')
         .in('business_id', ids)
         .gte('start_time', from.toISOString())
         .lte('start_time', to.toISOString())
-        .eq('status', 'COMPLETED');
+        .eq('status', 'COMPLETED')
+        .order('start_time');
 
       if (appts) {
-        const map: Record<string, number> = {};
-        appts.forEach((a: any) => {
-          const day = new Date(a.start_time).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
-          map[day] = (map[day] || 0) + (Number(a.price) || 0);
-        });
-        setRevenueData(Object.entries(map).map(([date, total]) => ({ date, total })));
-      }
+        setRevenueData(serieDeFacturacion(appts as any, porMes, lang));
+            }
     } catch (err) {
       console.error('Error fetching hub metrics:', err);
     } finally {
       setLoading(false);
     }
-  }, [linkedIds, period, selectedBusinessId]);
+  }, [linkedIds, period, selectedBusinessId, lang]);
 
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 

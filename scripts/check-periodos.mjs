@@ -39,7 +39,7 @@ const salida = await build({
 });
 mkdirSync('node_modules/.cache', { recursive: true });
 writeFileSync(SALIDA, salida.outputFiles[0].text);
-const { rangoDe, DIAS: VENTANA } = await import(pathToFileURL(SALIDA).href);
+const { rangoDe, DIAS: VENTANA, serieDeFacturacion } = await import(pathToFileURL(SALIDA).href);
 
 let fallos = 0;
 const falla = (msg) => { fallos++; console.log(`✗ ${msg}`); };
@@ -84,7 +84,50 @@ for (const [p, dias] of Object.entries(ESPERADO)) {
   if (VENTANA[p] !== dias) falla(`«${p}» debería abarcar ${dias} días y abarca ${VENTANA[p]}`);
 }
 
+// ── La serie de la gráfica ───────────────────────────────────────────
+// El fallo que cubre: la clave de agrupación era el texto de la etiqueta, y
+// «vie, 5» se repite todos los meses, así que meses distintos acababan
+// sumados en la misma barra.
+const citas = [
+  { start_time: '2026-09-05T10:00:00', price: 10 },
+  { start_time: '2026-08-05T10:00:00', price: 20 },  // mismo día del mes
+  { start_time: '2026-07-05T10:00:00', price: 30 },  // y otro más
+  { start_time: '2026-09-05T18:00:00', price: 5 },   // mismo día: sí suma
+  { start_time: 'fecha rota',          price: 99 },  // se ignora
+];
+
+const porDia = serieDeFacturacion(citas, false, 'es');
+if (porDia.length !== 3) falla(`por día deberían ser 3 barras y son ${porDia.length}`);
+const total = porDia.reduce((a, p) => a + p.total, 0);
+if (total !== 65) falla(`por día el total debería ser 65 y es ${total}`);
+if (!porDia.some((p) => p.total === 15)) falla('las dos citas del mismo día deberían sumarse');
+if (porDia.some((p) => p.total === 99)) falla('una fecha rota no debería contar');
+
+const porMes = serieDeFacturacion(citas, true, 'es');
+if (porMes.length !== 3) falla(`por mes deberían ser 3 barras y son ${porMes.length}`);
+// El orden lo da la clave, no el orden en que lleguen las citas.
+const revueltas = [...citas].reverse();
+if (JSON.stringify(serieDeFacturacion(revueltas, true, 'es')) !== JSON.stringify(porMes)) {
+  falla('la serie cambia según el orden en que lleguen las citas');
+}
+if (porMes[0].total !== 30 || porMes[2].total !== 15) {
+  falla(`por mes debería ir julio→septiembre y va ${JSON.stringify(porMes)}`);
+}
+
+// Y las etiquetas siguen al idioma. Se compara una semana entera: hay días
+// que se abrevian igual en los dos idiomas —el lunes es «lun» en ambos— y
+// mirar uno solo puede dar un falso aprobado.
+const semana = Array.from({ length: 7 }, (_, i) =>
+  ({ start_time: `2026-09-0${i + 1}T10:00:00`, price: 1 }));
+const enEs = serieDeFacturacion(semana, false, 'es').map((p) => p.date);
+const enIt = serieDeFacturacion(semana, false, 'it').map((p) => p.date);
+if (JSON.stringify(enEs) === JSON.stringify(enIt)) {
+  falla(`las etiquetas no cambian de idioma: ${JSON.stringify(enEs)}`);
+}
+console.log(`✓ serie de la gráfica    es=${JSON.stringify(enEs.slice(0, 4))}  ` +
+  `it=${JSON.stringify(enIt.slice(0, 4))}  meses=${JSON.stringify(porMes.map((p) => p.date))}`);
+
 console.log(fallos === 0
-  ? `\n✓ periodos encajados en los ${DIAS.length} días comprobados`
+  ? `\n✓ periodos encajados en los ${DIAS.length} días comprobados, y la serie agrupa y ordena bien`
   : `\n✗ ${fallos} problemas`);
 process.exit(fallos === 0 ? 0 : 1);
