@@ -41,9 +41,15 @@ async function verifySignature(
   svixTimestamp: string | null,
   svixSignature: string | null,
 ): Promise<boolean> {
+  // Sin secreto no se acepta nada. Antes esta rama devolvía true, y eso
+  // convertía el endpoint en público en cuanto faltara la variable: quien
+  // conociera la URL podía inventar rebotes, y un rebote inventado mete una
+  // dirección real en la lista de supresión y esa persona deja de recibir
+  // correos del salón para siempre. Prefiero quedarme sin estadísticas a
+  // aceptar eventos de cualquiera.
   if (!WEBHOOK_SECRET) {
-    console.warn('RESEND_WEBHOOK_SECRET no configurado: la firma no se verifica')
-    return true
+    console.error('RESEND_WEBHOOK_SECRET no configurado: se rechazan los eventos')
+    return false
   }
   if (!svixId || !svixTimestamp || !svixSignature) return false
 
